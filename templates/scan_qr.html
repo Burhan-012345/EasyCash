@@ -1,0 +1,879 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="scan-qr-container">
+    <div class="scan-qr-header">
+        <a href="{{ url_for('send_money') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2>Scan QR Code</h2>
+    </div>
+    
+    <div class="scan-qr-card">
+        <!-- Scan Method Selector -->
+        <div class="scan-methods">
+            <div class="method-tabs">
+                <button class="method-tab active" data-method="camera" id="tab-camera">
+                    <i class="fas fa-camera"></i>
+                    Camera Scan
+                </button>
+                <button class="method-tab" data-method="gallery" id="tab-gallery">
+                    <i class="fas fa-image"></i>
+                    Gallery
+                </button>
+                <button class="method-tab" data-method="manual" id="tab-manual">
+                    <i class="fas fa-keyboard"></i>
+                    Manual Entry
+                </button>
+            </div>
+            
+            <!-- Camera Scan Section -->
+            <div class="method-content active" id="content-camera">
+                <div class="camera-container">
+                    <div id="qr-reader" style="width: 100%;"></div>
+                    <div class="camera-actions">
+                        <button class="btn-secondary" id="stopCameraBtn">
+                            <i class="fas fa-stop"></i> Stop Camera
+                        </button>
+                        <button class="btn-secondary" id="switchCameraBtn">
+                            <i class="fas fa-sync-alt"></i> Switch Camera
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Gallery Scan Section -->
+            <div class="method-content" id="content-gallery">
+                <div class="gallery-container">
+                    <div class="file-upload-area" id="dropArea">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h4>Upload QR Image</h4>
+                        <p>Drag & drop or click to browse</p>
+                        <input type="file" id="qrFileInput" accept="image/*" hidden>
+                        <button class="btn-primary" id="browseBtn">
+                            <i class="fas fa-folder-open"></i> Browse Files
+                        </button>
+                        <p class="file-types">Supports: PNG, JPG, JPEG, GIF</p>
+                    </div>
+                    <div class="image-preview" id="imagePreview" style="display: none;">
+                        <img id="previewImage" src="" alt="QR Preview">
+                        <button class="btn-remove" id="removeImageBtn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <button class="btn-primary btn-block" id="scanImageBtn" disabled>
+                        <i class="fas fa-search"></i> Scan QR Code
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Manual Entry Section -->
+            <div class="method-content" id="content-manual">
+                <div class="manual-entry-container">
+                    <div class="form-group">
+                        <label for="manualUpiId">
+                            <i class="fas fa-qrcode"></i>
+                            UPI ID
+                        </label>
+                        <input type="text" 
+                               id="manualUpiId" 
+                               placeholder="username@provider"
+                               autocomplete="off">
+                        <div class="input-hint">
+                            Enter the full UPI ID (e.g., john@easycash)
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="manualName">
+                            <i class="fas fa-user"></i>
+                            Recipient Name (Optional)
+                        </label>
+                        <input type="text" 
+                               id="manualName" 
+                               placeholder="Recipient name"
+                               autocomplete="off">
+                    </div>
+                    <button class="btn-primary btn-block" id="validateManualBtn">
+                        <i class="fas fa-check-circle"></i> Validate & Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scan Results -->
+        <div class="scan-results" id="scanResults" style="display: none;">
+            <div class="results-header">
+                <h3><i class="fas fa-check-circle"></i> QR Code Scanned Successfully</h3>
+            </div>
+            <div class="results-body">
+                <div class="recipient-details">
+                    <div class="detail-item">
+                        <span class="label">UPI ID:</span>
+                        <span class="value" id="resultUpiId">Loading...</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Name:</span>
+                        <span class="value" id="resultName">Loading...</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Status:</span>
+                        <span class="value status" id="resultStatus">Verifying...</span>
+                    </div>
+                </div>
+                
+                <!-- Amount Input -->
+                <div class="form-group">
+                    <label for="qrAmount">
+                        <i class="fas fa-rupee-sign"></i>
+                        Enter Amount
+                    </label>
+                    <input type="number" 
+                           id="qrAmount" 
+                           placeholder="0.00"
+                           step="0.01"
+                           min="1"
+                           max="50000"
+                           required>
+                    <div class="quick-amounts">
+                        <button type="button" class="quick-amount" data-amount="100">₹100</button>
+                        <button type="button" class="quick-amount" data-amount="500">₹500</button>
+                        <button type="button" class="quick-amount" data-amount="1000">₹1,000</button>
+                        <button type="button" class="quick-amount" data-amount="5000">₹5,000</button>
+                    </div>
+                </div>
+                
+                <!-- Hidden Form for Submission -->
+                <form id="qrPaymentForm" style="display: none;">
+                    <input type="hidden" name="upi_id" id="hiddenUpiId">
+                    <input type="hidden" name="receiver_name" id="hiddenName">
+                    <input type="hidden" name="qr_data" id="hiddenQrData">
+                </form>
+                
+                <button class="btn-primary btn-block" id="proceedPaymentBtn">
+                    <i class="fas fa-paper-plane"></i> Proceed to Payment
+                </button>
+            </div>
+        </div>
+        
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p id="loadingText">Processing...</p>
+        </div>
+    </div>
+</div>
+
+<!-- QR Scanner Library -->
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+.scan-qr-container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.scan-qr-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.scan-qr-card {
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    box-shadow: var(--shadow);
+    position: relative;
+}
+
+.method-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+.method-tab {
+    flex: 1;
+    padding: 15px 10px;
+    background: transparent;
+    border: none;
+    color: var(--dark-text-secondary);
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 14px;
+}
+
+.method-tab:hover {
+    color: var(--primary-color);
+}
+
+.method-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background: rgba(var(--primary-rgb), 0.1);
+}
+
+.method-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.method-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.camera-container {
+    margin-bottom: 20px;
+}
+
+#qr-reader {
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.camera-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.file-upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    margin-bottom: 20px;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.file-upload-area:hover {
+    border-color: var(--primary-color);
+    background: rgba(var(--primary-rgb), 0.05);
+}
+
+.file-upload-area i {
+    font-size: 48px;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+.file-upload-area h4 {
+    margin: 0 0 10px 0;
+    color: var(--dark-text);
+}
+
+.file-upload-area p {
+    color: var(--dark-text-secondary);
+    margin-bottom: 15px;
+}
+
+.file-types {
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    margin-top: 10px;
+}
+
+.image-preview {
+    position: relative;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 300px;
+    margin: 0 auto 20px;
+}
+
+.image-preview img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.btn-remove {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.7);
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.btn-remove:hover {
+    background: var(--danger-color);
+    transform: scale(1.1);
+}
+
+.manual-entry-container {
+    padding: 20px 0;
+}
+
+.scan-results {
+    margin-top: 30px;
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 25px;
+    border: 1px solid var(--border-color);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.results-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.results-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--success-color);
+    font-size: 18px;
+}
+
+.recipient-details {
+    background: var(--dark-surface);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 25px;
+    border: 1px solid var(--border-color);
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.detail-item:last-child {
+    border-bottom: none;
+}
+
+.detail-item .label {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.detail-item .value {
+    font-weight: 600;
+    color: var(--dark-text);
+    max-width: 60%;
+    word-break: break-all;
+    text-align: right;
+}
+
+.detail-item .value.status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.detail-item .value.status.success {
+    background: rgba(52, 168, 83, 0.2);
+    color: var(--success-color);
+}
+
+.detail-item .value.status.warning {
+    background: rgba(251, 188, 4, 0.2);
+    color: var(--warning-color);
+}
+
+.detail-item .value.status.error {
+    background: rgba(234, 67, 53, 0.2);
+    color: var(--danger-color);
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    border-radius: var(--border-radius);
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-overlay p {
+    color: white;
+    font-size: 16px;
+}
+
+/* HTML5 QR Scanner Customization */
+#qr-reader__dashboard_section {
+    background: var(--dark-surface-light) !important;
+    border-color: var(--border-color) !important;
+}
+
+#qr-reader__dashboard_section_csr {
+    color: var(--dark-text) !important;
+}
+
+#qr-reader__scan_region {
+    border-color: var(--border-color) !important;
+}
+
+#qr-reader__scan_region img {
+    filter: invert(1);
+}
+</style>
+
+<script src="{{ url_for('static', filename='js/qr.js') }}"></script>
+
+<script>
+// Tab switching
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.method-tab');
+    const contents = document.querySelectorAll('.method-content');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const method = tab.dataset.method;
+            
+            // Update tabs
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            // Update contents
+            contents.forEach(content => {
+                content.classList.remove('active');
+                if (content.id === `content-${method}`) {
+                    content.classList.add('active');
+                }
+            });
+            
+            // Stop camera if switching away from camera
+            if (method !== 'camera' && window.qrScanner) {
+                window.qrScanner.stop();
+            }
+        });
+    });
+    
+    // Initialize QR scanner
+    initQRScanner();
+    
+    // Initialize manual entry validation
+    initManualEntry();
+});
+
+function initManualEntry() {
+    const validateBtn = document.getElementById('validateManualBtn');
+    const manualUpiInput = document.getElementById('manualUpiId');
+    const manualNameInput = document.getElementById('manualName');
+    
+    if (!validateBtn) return;
+    
+    validateBtn.addEventListener('click', async function() {
+        const upiId = manualUpiInput.value.trim();
+        const name = manualNameInput.value.trim();
+        
+        // Clear previous states
+        manualUpiInput.classList.remove('error', 'success');
+        
+        // Validate UPI ID format
+        if (!validateUPIFormat(upiId)) {
+            manualUpiInput.classList.add('error');
+            showToast('Invalid UPI ID format. Use format: username@provider', 'error');
+            return;
+        }
+        
+        // Show loading state
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validating...';
+        
+        try {
+            // Check if user is trying to send to themselves
+            const currentUserUPI = '{{ user.upi_id if user and user.upi_id else "" }}';
+            if (upiId.toLowerCase() === currentUserUPI.toLowerCase()) {
+                manualUpiInput.classList.add('error');
+                showToast('You cannot send money to your own UPI ID', 'error');
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-check-circle"></i> Validate & Continue';
+                return;
+            }
+            
+            // Make API call to lookup UPI ID
+            const response = await fetch(`/api/upi-lookup?upi_id=${encodeURIComponent(upiId)}`);
+            const data = await response.json();
+            
+            console.log('Manual UPI lookup response:', data);
+            
+            if (data.error) {
+                manualUpiInput.classList.add('error');
+                showToast(data.error, 'error');
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-check-circle"></i> Validate & Continue';
+                return;
+            }
+            
+            if (data.exists) {
+                // Check if user is trying to send to themselves by username
+                const currentUsername = '{{ user.username }}';
+                if (data.username === currentUsername) {
+                    manualUpiInput.classList.add('error');
+                    showToast('You cannot send money to yourself', 'error');
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-check-circle"></i> Validate & Continue';
+                    return;
+                }
+                
+                // User found in EasyCash
+                manualUpiInput.classList.add('success');
+                
+                // Show success and prepare data
+                const qrData = {
+                    upi_id: upiId,
+                    username: data.username || name || upiId.split('@')[0],
+                    name: name || data.username || upiId.split('@')[0],
+                    verified: true,
+                    source: 'Manual Entry',
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Store QR data
+                localStorage.setItem('last_qr_scan', JSON.stringify(qrData));
+                
+                // Show results section
+                showQRResults(qrData);
+                
+                showToast('UPI ID validated successfully!', 'success');
+            } else {
+                // User not found in EasyCash
+                manualUpiInput.classList.add('success');
+                
+                // Show warning but allow proceeding
+                const qrData = {
+                    upi_id: upiId,
+                    username: name || upiId.split('@')[0],
+                    name: name || upiId.split('@')[0],
+                    verified: false,
+                    source: 'Manual Entry',
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Store QR data
+                localStorage.setItem('last_qr_scan', JSON.stringify(qrData));
+                
+                // Show results section
+                showQRResults(qrData);
+                
+                showToast('UPI ID not found in EasyCash. You can still proceed with external transfer.', 'warning');
+            }
+            
+        } catch (error) {
+            console.error('Error validating UPI ID:', error);
+            manualUpiInput.classList.add('error');
+            showToast('Failed to validate UPI ID. Please try again.', 'error');
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-check-circle"></i> Validate & Continue';
+        }
+    });
+    
+    // Validate on Enter key press
+    manualUpiInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            validateBtn.click();
+        }
+    });
+}
+
+function validateUPIFormat(upiId) {
+    // Match the same pattern as send_money.html and app.py QR payment validation
+    // Pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+$
+    const upiPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+$/;
+    return upiPattern.test(upiId);
+}
+
+function showQRResults(qrData) {
+    const resultsSection = document.getElementById('scanResults');
+    const resultUpiId = document.getElementById('resultUpiId');
+    const resultName = document.getElementById('resultName');
+    const resultStatus = document.getElementById('resultStatus');
+    const hiddenUpiId = document.getElementById('hiddenUpiId');
+    const hiddenName = document.getElementById('hiddenName');
+    const hiddenQrData = document.getElementById('hiddenQrData');
+    const qrAmount = document.getElementById('qrAmount');
+    
+    // Update UI with scanned data
+    resultUpiId.textContent = qrData.upi_id;
+    resultName.textContent = qrData.name || qrData.username || qrData.upi_id.split('@')[0];
+    
+    if (qrData.verified) {
+        resultStatus.textContent = 'Verified - EasyCash User';
+        resultStatus.className = 'value status success';
+    } else {
+        resultStatus.textContent = 'External UPI ID';
+        resultStatus.className = 'value status warning';
+    }
+    
+    // Fill hidden form fields
+    hiddenUpiId.value = qrData.upi_id;
+    hiddenName.value = qrData.name || '';
+    hiddenQrData.value = JSON.stringify(qrData);
+    
+    // Show results section
+    resultsSection.style.display = 'block';
+    
+    // Reset validate button
+    const validateBtn = document.getElementById('validateManualBtn');
+    if (validateBtn) {
+        validateBtn.disabled = false;
+        validateBtn.innerHTML = '<i class="fas fa-check-circle"></i> Validate & Continue';
+    }
+    
+    // Set up quick amount buttons
+    setupQuickAmounts();
+    
+    // Set up proceed payment button
+    setupProceedPayment(qrData);
+    
+    // Focus on amount input
+    setTimeout(() => {
+        qrAmount.focus();
+    }, 300);
+}
+
+function setupQuickAmounts() {
+    const quickAmounts = document.querySelectorAll('.quick-amount');
+    const qrAmount = document.getElementById('qrAmount');
+    
+    quickAmounts.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const amount = this.dataset.amount;
+            
+            // Set amount
+            qrAmount.value = amount;
+            
+            // Trigger input event
+            const inputEvent = new Event('input', { bubbles: true });
+            qrAmount.dispatchEvent(inputEvent);
+            
+            // Update active state
+            quickAmounts.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Visual feedback
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 150);
+        });
+    });
+}
+
+function setupProceedPayment(qrData) {
+    const proceedBtn = document.getElementById('proceedPaymentBtn');
+    const qrAmount = document.getElementById('qrAmount');
+    
+    if (!proceedBtn) return;
+    
+    proceedBtn.addEventListener('click', function() {
+        const amount = parseFloat(qrAmount.value) || 0;
+        
+        // Validate amount
+        if (!amount || amount <= 0) {
+            showToast('Please enter a valid amount', 'error');
+            qrAmount.focus();
+            return;
+        }
+        
+        if (amount > 50000) {
+            showToast('Maximum amount is ₹50,000', 'error');
+            qrAmount.focus();
+            return;
+        }
+        
+        // Calculate total
+        const fee = qrData.verified ? 0 : Math.min(amount * 0.01, 10);
+        const total = amount + fee;
+        const currentBalance = parseFloat('{{ user.balance }}');
+        
+        if (total > currentBalance) {
+            showToast('Insufficient balance', 'error');
+            return;
+        }
+        
+        // Show confirmation
+        let confirmationMessage = `Send ₹${amount.toFixed(2)} to:\n`;
+        confirmationMessage += `${qrData.name || qrData.upi_id.split('@')[0]}\n`;
+        confirmationMessage += `(${qrData.upi_id})\n\n`;
+        
+        if (qrData.verified) {
+            confirmationMessage += 'EasyCash user • Instant transfer\n';
+        } else {
+            confirmationMessage += 'External UPI ID • May take longer\n';
+        }
+        
+        if (fee > 0) {
+            confirmationMessage += `\nTransaction Fee: ₹${fee.toFixed(2)}\n`;
+            confirmationMessage += `Total: ₹${total.toFixed(2)}\n`;
+        }
+        
+        confirmationMessage += `\nBalance after: ₹${(currentBalance - total).toFixed(2)}`;
+        
+        if (confirm(confirmationMessage)) {
+            // Store the QR data with amount
+            qrData.amount = amount;
+            localStorage.setItem('last_qr_scan', JSON.stringify(qrData));
+            
+            // Redirect to send money page for PIN confirmation
+            window.location.href = "{{ url_for('send_money') }}";
+        }
+    });
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'toast-container';
+        document.body.appendChild(toastContainer);
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 300);
+    }, 3000);
+}
+
+// CSS for toast
+const toastStyles = document.createElement('style');
+toastStyles.textContent = `
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 90%;
+}
+
+.toast {
+    padding: 15px 25px;
+    background: var(--dark-surface);
+    color: var(--dark-text);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideUp 0.3s ease;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+}
+
+.toast.success {
+    background: linear-gradient(135deg, var(--success-color), #219653);
+    color: white;
+    border-color: rgba(var(--success-rgb), 0.3);
+}
+
+.toast.error {
+    background: linear-gradient(135deg, var(--danger-color), #c0392b);
+    color: white;
+    border-color: rgba(231, 76, 60, 0.3);
+}
+
+.toast.warning {
+    background: linear-gradient(135deg, var(--warning-color), #d35400);
+    color: white;
+    border-color: rgba(var(--warning-rgb), 0.3);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+`;
+
+document.head.appendChild(toastStyles);
+</script>
+{% endblock %}

@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="app-header">
+        <div class="app-logo">
+            <i class="fas fa-wallet"></i>
+            <h1>EasyCash</h1>
+        </div>
+        <p class="auth-subtitle">Enter your mobile number to continue</p>
+    </div>
+    
+    <div class="auth-card">
+        <h2>Mobile Number</h2>
+        <p>Please enter your 10-digit mobile number</p>
+        
+        {% if error %}
+        <div class="error-message">
+            <i class="fas fa-exclamation-circle"></i>
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <form method="POST" class="auth-form">
+            <div class="form-group">
+                <label for="phone">
+                    <i class="fas fa-mobile-alt"></i>
+                    Mobile Number
+                </label>
+                <input type="tel" 
+                       id="phone" 
+                       name="phone" 
+                       placeholder="Enter 10-digit number"
+                       pattern="[6-9][0-9]{9}"
+                       maxlength="10"
+                       required
+                       autocomplete="tel"
+                       autofocus>
+                <div class="input-hint">
+                    Enter number starting with 6-9
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">
+                    Continue
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </form>
+        
+        <div class="auth-footer">
+            <p>By continuing, you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a></p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const phoneInput = document.getElementById('phone');
+    
+    // Format phone number as user types
+    phoneInput.addEventListener('input', function() {
+        let value = this.value.replace(/\D/g, '');
+        
+        // Limit to 10 digits
+        if (value.length > 10) {
+            value = value.substring(0, 10);
+        }
+        
+        this.value = value;
+        
+        // Add visual feedback for valid number
+        if (value.length === 10 && /^[6-9]/.test(value)) {
+            this.classList.add('valid');
+            this.classList.remove('invalid');
+        } else if (value.length > 0) {
+            this.classList.add('invalid');
+            this.classList.remove('valid');
+        } else {
+            this.classList.remove('valid', 'invalid');
+        }
+    });
+    
+    // Auto-submit when 10 digits are entered
+    phoneInput.addEventListener('keyup', function(e) {
+        if (this.value.length === 10 && /^[6-9]/.test(this.value) && e.key !== 'Backspace') {
+            this.form.submit();
+        }
+    });
+});
+</script>
+
+<style>
+.auth-container {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.app-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.app-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.app-logo i {
+    font-size: 32px;
+    color: var(--primary-color);
+}
+
+.app-logo h1 {
+    margin: 0;
+    font-size: 28px;
+    color: var(--dark-text);
+}
+
+.auth-subtitle {
+    color: var(--dark-text-secondary);
+    margin: 0;
+}
+
+.auth-card {
+    background: var(--dark-surface);
+    border-radius: var(--radius-lg);
+    padding: 30px;
+    box-shadow: var(--shadow-md);
+}
+
+.auth-card h2 {
+    margin: 0 0 10px 0;
+    color: var(--dark-text);
+    font-size: 24px;
+}
+
+.auth-card p {
+    margin: 0 0 30px 0;
+    color: var(--dark-text-secondary);
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    color: var(--dark-text);
+    font-weight: 500;
+}
+
+.form-group label i {
+    color: var(--primary-color);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 15px;
+    background: var(--dark-bg);
+    border: 2px solid var(--dark-surface-lighter);
+    border-radius: var(--radius-md);
+    color: var(--dark-text);
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
+}
+
+.form-group input.valid {
+    border-color: var(--success-color);
+}
+
+.form-group input.invalid {
+    border-color: var(--danger-color);
+}
+
+.input-hint {
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    margin-top: 5px;
+}
+
+.form-actions {
+    margin-top: 30px;
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 15px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.error-message {
+    background: rgba(234, 67, 53, 0.1);
+    border: 1px solid rgba(234, 67, 53, 0.3);
+    color: var(--danger-color);
+    padding: 12px 15px;
+    border-radius: var(--radius-md);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.auth-footer {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--dark-surface-lighter);
+    text-align: center;
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.auth-footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %}

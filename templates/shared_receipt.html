@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyCash - Shared Receipt</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .receipt-container {
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .receipt-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+        }
+        
+        .receipt-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px dashed #e0e0e0;
+        }
+        
+        .receipt-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 10px;
+        }
+        
+        .receipt-logo i {
+            font-size: 28px;
+        }
+        
+        .receipt-title {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .phone-display {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .phone-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #3498db;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        
+        .phone-details {
+            flex: 1;
+        }
+        
+        .phone-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .phone-number {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            letter-spacing: 0.5px;
+        }
+        
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #27ae60, #219653);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin: 0 auto 20px;
+        }
+        
+        .receipt-card h2 {
+            margin-bottom: 30px;
+            color: #2c3e50;
+            text-align: center;
+        }
+        
+        .receipt-details {
+            margin-bottom: 30px;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: #333;
+            text-align: right;
+        }
+        
+        .detail-value.amount {
+            color: #27ae60;
+            font-size: 18px;
+        }
+        
+        .detail-value.phone {
+            font-family: monospace;
+            letter-spacing: 0.5px;
+        }
+        
+        .detail-value.small {
+            font-size: 12px;
+            font-family: monospace;
+            color: #666;
+        }
+        
+        .phone-verification {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .phone-verification p {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .verification-code {
+            font-family: monospace;
+            font-size: 20px;
+            font-weight: bold;
+            color: #1a73e8;
+            letter-spacing: 2px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px dashed #1a73e8;
+            margin: 10px 0;
+        }
+        
+        .receipt-footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px dashed #e0e0e0;
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+        }
+        
+        .receipt-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn-print, .btn-close {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-print {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-print:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+        
+        .btn-close {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .btn-close:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+        
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 60px;
+            color: rgba(52, 152, 219, 0.05);
+            font-weight: bold;
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 0;
+            display: none;
+        }
+        
+        @media print {
+            body {
+                background: white !important;
+            }
+            
+            .receipt-card {
+                box-shadow: none !important;
+                padding: 20px !important;
+            }
+            
+            .watermark {
+                display: block !important;
+            }
+            
+            .receipt-actions {
+                display: none !important;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .receipt-card {
+                padding: 20px;
+            }
+            
+            body {
+                padding: 10px;
+            }
+            
+            .phone-display {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="watermark">SHARED RECEIPT</div>
+    <div class="receipt-container">
+        <div class="receipt-card">
+            <div class="receipt-header">
+                <div class="receipt-logo">
+                    <i class="fas fa-wallet"></i>
+                    EasyCash
+                </div>
+                <div class="receipt-title">Shared Payment Receipt</div>
+                
+                <div class="phone-display">
+                    <div class="phone-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="phone-details">
+                        <div class="phone-label">Account Phone</div>
+                        <div class="phone-number">{{ sender.phone }}</div>
+                    </div>
+                </div>
+                
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h2>Payment Successful!</h2>
+            </div>
+            
+            <div class="receipt-details">
+                <div class="detail-row">
+                    <span class="detail-label">Amount Sent</span>
+                    <span class="detail-value amount">₹{{ "%.2f"|format(success_data.amount) }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">From</span>
+                    <span class="detail-value">{{ sender.name if sender.name else sender.phone }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">From Phone</span>
+                    <span class="detail-value phone">{{ sender.phone }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">To</span>
+                    <span class="detail-value">{{ success_data.receiver_name if success_data.receiver_name else success_data.receiver_identifier }}</span>
+                </div>
+                
+                {% if success_data.receiver_phone %}
+                <div class="detail-row">
+                    <span class="detail-label">To Phone</span>
+                    <span class="detail-value phone">{{ success_data.receiver_phone }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="detail-row">
+                    <span class="detail-label">Via</span>
+                    <span class="detail-value">{{ success_data.payment_method|title }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Transaction ID</span>
+                    <span class="detail-value small">{{ success_data.transaction_id }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Date & Time</span>
+                    <span class="detail-value">{{ transaction_date.strftime('%d %b %Y, %I:%M %p') }}</span>
+                </div>
+            </div>
+            
+            <div class="phone-verification">
+                <p><i class="fas fa-shield-alt"></i> Phone Verified Transaction</p>
+                <div class="verification-code">{{ success_data.transaction_id[:8]|upper }}</div>
+                <p>Use this code for verification</p>
+            </div>
+            
+            <div class="receipt-footer">
+                <p>© 2024 EasyCash. All rights reserved.</p>
+                <p>This receipt was generated on {{ transaction_date.strftime('%d %B, %Y at %I:%M %p') }}</p>
+                <p>This is a shared receipt from EasyCash.</p>
+                <p>Sender Phone: {{ sender.phone }}</p>
+            </div>
+            
+            <div class="receipt-actions">
+                <button onclick="window.print()" class="btn-print">
+                    <i class="fas fa-print"></i>
+                    Print Receipt
+                </button>
+                <button onclick="window.close()" class="btn-close">
+                    <i class="fas fa-times"></i>
+                    Close Window
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Show watermark for print
+        window.onbeforeprint = function() {
+            document.querySelector('.watermark').style.display = 'block';
+        };
+        
+        window.onafterprint = function() {
+            document.querySelector('.watermark').style.display = 'none';
+        };
+        
+        // Format phone numbers on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const phoneElements = document.querySelectorAll('.phone-number, .detail-value.phone');
+            phoneElements.forEach(el => {
+                const phone = el.textContent;
+                if (phone && phone.length === 10) {
+                    el.textContent = phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contacts - EasyCash</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    /* EasyCash - Contacts Page Styling */
+    /* Version: 2.0 | Mobile-First | Dark Theme */
+
+    /* ===== CSS Variables ===== */
+    :root {
+        /* Primary Colors */
+        --primary-color: #1a73e8;
+        --primary-dark: #0d47a1;
+        --primary-light: #4285f4;
+        --primary-gradient: linear-gradient(135deg, #1a73e8, #0d47a1);
+        
+        /* Secondary Colors */
+        --secondary-color: #34a853;
+        --secondary-dark: #2e7d32;
+        --danger-color: #ea4335;
+        --danger-dark: #c62828;
+        --warning-color: #fbbc04;
+        --warning-dark: #f57c00;
+        
+        /* Dark Theme Colors */
+        --dark-bg: #121212;
+        --dark-surface: #1e1e1e;
+        --dark-surface-light: #2d2d2d;
+        --dark-surface-lighter: #3a3a3a;
+        --dark-text: #ffffff;
+        --dark-text-secondary: #b0b0b0;
+        --dark-text-disabled: #666666;
+        
+        /* Shadows & Effects */
+        --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.2);
+        --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.3);
+        --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.4);
+        
+        /* Border Radius */
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --radius-full: 9999px;
+        
+        /* Spacing */
+        --space-xs: 4px;
+        --space-sm: 8px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
+        --space-2xl: 48px;
+        
+        /* Transitions */
+        --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-base: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        
+        /* Typography */
+        --font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --font-size-xs: 12px;
+        --font-size-sm: 14px;
+        --font-size-base: 16px;
+        --font-size-lg: 18px;
+        --font-size-xl: 20px;
+        --font-size-2xl: 24px;
+        --font-size-3xl: 32px;
+        --font-size-4xl: 40px;
+    }
+
+    /* ===== Reset & Base Styles ===== */
+    body {
+        font-family: var(--font-family);
+        background-color: var(--dark-bg);
+        color: var(--dark-text);
+        line-height: 1.6;
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ===== Navbar ===== */
+    .navbar {
+        background: var(--primary-gradient) !important;
+        box-shadow: var(--shadow-md);
+        padding: var(--space-sm) 0;
+    }
+
+    .navbar-brand {
+        font-weight: 600;
+        font-size: var(--font-size-lg);
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+    }
+
+    .navbar-brand i {
+        font-size: var(--font-size-xl);
+    }
+
+    .nav-link {
+        color: rgba(255, 255, 255, 0.9) !important;
+        padding: var(--space-sm) var(--space-md) !important;
+        border-radius: var(--radius-sm);
+        transition: all var(--transition-fast);
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+        background: rgba(255, 255, 255, 0.1);
+        color: white !important;
+    }
+
+    .nav-link i {
+        font-size: var(--font-size-base);
+    }
+
+    /* ===== Container ===== */
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: var(--space-lg);
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            padding: var(--space-md);
+        }
+    }
+
+    /* ===== Cards ===== */
+    .card {
+        background: var(--dark-surface);
+        border: 1px solid var(--dark-surface-lighter);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        transition: all var(--transition-base);
+        margin-bottom: var(--space-md);
+        overflow: hidden;
+    }
+
+    .card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+    }
+
+    .card-body {
+        padding: var(--space-lg);
+    }
+
+    /* Contact Cards */
+    .contact-card {
+        border-left: 4px solid var(--primary-color);
+        transition: transform var(--transition-base), box-shadow var(--transition-base);
+        height: 100%;
+    }
+
+    .contact-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        border-left-color: var(--primary-light);
+    }
+
+    .contact-avatar {
+        width: 50px;
+        height: 50px;
+        background: var(--primary-gradient);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--font-size-xl);
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    /* Stat Cards */
+    .stat-card {
+        background: linear-gradient(135deg, #1a237e, #283593);
+        color: white;
+        border: none;
+    }
+
+    .stat-card .fa-users { color: var(--primary-light); }
+    .stat-card .fa-paper-plane { color: var(--secondary-color); }
+    .stat-card .fa-download { color: var(--primary-light); }
+    .stat-card .fa-handshake { color: var(--warning-color); }
+
+    /* ===== Buttons ===== */
+    .btn-primary {
+        background: var(--primary-gradient);
+        color: white;
+        border: none;
+        padding: var(--space-md) var(--space-xl);
+        border-radius: var(--radius-full);
+        font-weight: 500;
+        transition: all var(--transition-base);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-sm);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        background: linear-gradient(135deg, #0d47a1, #1a73e8);
+    }
+
+    .btn-outline-primary {
+        background: transparent;
+        color: var(--primary-color);
+        border: 2px solid var(--primary-color);
+        padding: calc(var(--space-md) - 2px) var(--space-xl);
+        border-radius: var(--radius-full);
+        font-weight: 500;
+        transition: all var(--transition-base);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-sm);
+    }
+
+    .btn-outline-primary:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .btn-sm {
+        padding: var(--space-sm) var(--space-lg);
+        font-size: var(--font-size-sm);
+    }
+
+    /* ===== Search Box ===== */
+    .search-box {
+        background: var(--dark-surface-light);
+        border: 2px solid var(--dark-surface-lighter);
+        border-radius: var(--radius-full);
+        padding: var(--space-md) var(--space-lg);
+        color: var(--dark-text);
+        font-size: var(--font-size-base);
+        transition: all var(--transition-base);
+        width: 100%;
+    }
+
+    .search-box:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
+        background: var(--dark-surface);
+    }
+
+    /* ===== Tabs ===== */
+    .nav-tabs {
+        border-bottom: 2px solid var(--dark-surface-lighter);
+        margin-bottom: var(--space-lg);
+    }
+
+    .nav-tabs .nav-link {
+        background: transparent;
+        border: none;
+        color: var(--dark-text-secondary);
+        padding: var(--space-md) var(--space-lg);
+        border-radius: var(--radius-md) var(--radius-md) 0 0;
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        font-weight: 500;
+        transition: all var(--transition-fast);
+    }
+
+    .nav-tabs .nav-link:hover {
+        color: var(--dark-text);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-tabs .nav-link.active {
+        color: var(--primary-color);
+        background: var(--dark-surface);
+        border-bottom: 2px solid var(--primary-color);
+    }
+
+    /* ===== Empty States ===== */
+    .empty-state {
+        text-align: center;
+        padding: var(--space-2xl) var(--space-lg);
+        color: var(--dark-text-secondary);
+    }
+
+    .empty-state i {
+        font-size: 48px;
+        margin-bottom: var(--space-lg);
+        opacity: 0.5;
+    }
+
+    .empty-state h4 {
+        color: var(--dark-text);
+        margin-bottom: var(--space-sm);
+    }
+
+    /* ===== Badges ===== */
+    .badge {
+        padding: var(--space-xs) var(--space-sm);
+        border-radius: var(--radius-sm);
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .badge.bg-success {
+        background: rgba(52, 168, 83, 0.2) !important;
+        color: var(--secondary-color) !important;
+        border: 1px solid rgba(52, 168, 83, 0.3);
+    }
+
+    .badge.bg-info {
+        background: rgba(26, 115, 232, 0.2) !important;
+        color: var(--primary-color) !important;
+        border: 1px solid rgba(26, 115, 232, 0.3);
+    }
+
+    .badge.bg-primary {
+        background: rgba(26, 115, 232, 0.2) !important;
+        color: var(--primary-color) !important;
+        border: 1px solid rgba(26, 115, 232, 0.3);
+    }
+
+    /* ===== Modals ===== */
+    .modal-content {
+        background: var(--dark-surface);
+        border: 1px solid var(--dark-surface-lighter);
+        border-radius: var(--radius-lg);
+        color: var(--dark-text);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid var(--dark-surface-lighter);
+        padding: var(--space-lg);
+    }
+
+    .modal-body {
+        padding: var(--space-lg);
+    }
+
+    .modal-footer {
+        border-top: 1px solid var(--dark-surface-lighter);
+        padding: var(--space-lg);
+    }
+
+    .form-control {
+        background: var(--dark-surface-light);
+        border: 2px solid var(--dark-surface-lighter);
+        border-radius: var(--radius-md);
+        color: var(--dark-text);
+        padding: var(--space-md);
+        transition: all var(--transition-base);
+    }
+
+    .form-control:focus {
+        background: var(--dark-surface);
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
+        color: var(--dark-text);
+    }
+
+    .form-label {
+        color: var(--dark-text-secondary);
+        font-weight: 500;
+        margin-bottom: var(--space-sm);
+    }
+
+    .alert-info {
+        background: rgba(26, 115, 232, 0.1);
+        border: 1px solid rgba(26, 115, 232, 0.3);
+        color: var(--primary-light);
+        border-radius: var(--radius-md);
+    }
+
+    /* ===== Quick Actions ===== */
+    .quick-actions {
+        position: fixed;
+        bottom: 80px;
+        right: 20px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
+
+    .quick-action-btn {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--primary-gradient);
+        color: white;
+        border: none;
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--font-size-lg);
+        transition: all var(--transition-base);
+        cursor: pointer;
+    }
+
+    .quick-action-btn:hover {
+        transform: scale(1.1);
+        box-shadow: var(--shadow-xl);
+    }
+
+    /* ===== Flash Messages & Alerts ===== */
+    .alert {
+        background: var(--dark-surface);
+        border: 1px solid var(--dark-surface-lighter);
+        border-radius: var(--radius-lg);
+        padding: var(--space-md) var(--space-lg);
+        box-shadow: var(--shadow-md);
+        backdrop-filter: blur(10px);
+    }
+
+    .alert-info {
+        background: rgba(26, 115, 232, 0.1);
+        border-color: rgba(26, 115, 232, 0.3);
+        color: var(--primary-light);
+    }
+
+    .alert-danger {
+        background: rgba(234, 67, 53, 0.1);
+        border-color: rgba(234, 67, 53, 0.3);
+        color: var(--danger-color);
+    }
+
+    /* ===== Input Group ===== */
+    .input-group {
+        background: var(--dark-surface-light);
+        border-radius: var(--radius-full);
+        border: 2px solid var(--dark-surface-lighter);
+        transition: all var(--transition-base);
+    }
+
+    .input-group:focus-within {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
+    }
+
+    .input-group-text {
+        background: transparent;
+        border: none;
+        color: var(--dark-text-secondary);
+        padding: 0 var(--space-md);
+    }
+
+    /* ===== Cursor Pointer ===== */
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    /* ===== Responsive Grid ===== */
+    @media (max-width: 768px) {
+        .row {
+            margin: calc(-1 * var(--space-sm));
+        }
+        
+        .row > [class*="col-"] {
+            padding: var(--space-sm);
+        }
+        
+        .quick-actions {
+            bottom: 70px;
+            right: 15px;
+        }
+        
+        .quick-action-btn {
+            width: 50px;
+            height: 50px;
+            font-size: var(--font-size-base);
+        }
+        
+        .contact-avatar {
+            width: 40px;
+            height: 40px;
+            font-size: var(--font-size-lg);
+        }
+    }
+
+    @media (max-width: 480px) {
+        .container {
+            padding: var(--space-sm);
+        }
+        
+        .card-body {
+            padding: var(--space-md);
+        }
+        
+        .btn-primary,
+        .btn-outline-primary {
+            padding: var(--space-sm) var(--space-lg);
+            font-size: var(--font-size-sm);
+        }
+        
+        .nav-tabs .nav-link {
+            padding: var(--space-sm) var(--space-md);
+            font-size: var(--font-size-sm);
+        }
+    }
+
+    /* ===== Animations ===== */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .appear {
+        animation: fadeIn 0.5s ease-out;
+    }
+
+    /* ===== Scrollbar ===== */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--dark-surface-light);
+        border-radius: var(--radius-sm);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--primary-color);
+        border-radius: var(--radius-sm);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--primary-dark);
+    }
+
+    /* ===== Focus States ===== */
+    *:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 2px;
+    }
+
+    /* ===== Selection ===== */
+    ::selection {
+        background-color: rgba(26, 115, 232, 0.3);
+        color: var(--dark-text);
+    }
+
+    /* ===== Light Mode Support ===== */
+    @media (prefers-color-scheme: light) {
+        :root {
+            --dark-bg: #f5f5f5;
+            --dark-surface: #ffffff;
+            --dark-surface-light: #f0f0f0;
+            --dark-surface-lighter: #e0e0e0;
+            --dark-text: #000000;
+            --dark-text-secondary: #666666;
+            --dark-text-disabled: #999999;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+            --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.2);
+        }
+        
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+        
+        .search-box,
+        .form-control {
+            background: white;
+            border-color: #ddd;
+        }
+        
+        .search-box:focus,
+        .form-control:focus {
+            background: white;
+        }
+        
+        .input-group {
+            background: white;
+            border-color: #ddd;
+        }
+    }
+
+    /* ===== Accessibility ===== */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+
+    /* ===== Print Styles ===== */
+    @media print {
+        .navbar,
+        .quick-actions,
+        .btn,
+        .modal,
+        .alert {
+            display: none !important;
+        }
+        
+        .container {
+            padding: 0;
+            max-width: 100%;
+        }
+        
+        body {
+            background: white !important;
+            color: black !important;
+        }
+        
+        .card {
+            box-shadow: none !important;
+            border: 1px solid #ddd !important;
+            page-break-inside: avoid;
+        }
+    }
+</style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-wallet me-2"></i>
+                EasyCash
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">
+                            <i class="fas fa-home me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('send_money') }}">
+                            <i class="fas fa-paper-plane me-1"></i> Send
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('transactions') }}">
+                            <i class="fas fa-exchange-alt me-1"></i> Transactions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('contacts') }}">
+                            <i class="fas fa-address-book me-1"></i> Contacts
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('profile') }}">
+                            <i class="fas fa-user me-1"></i> Profile
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt me-1"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Page Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h2 class="mb-1">
+                                    <i class="fas fa-address-book text-primary me-2"></i>
+                                    My Contacts
+                                </h2>
+                                <p class="text-muted mb-0">Manage your saved contacts for quick payments</p>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
+                                    <i class="fas fa-user-plus me-1"></i> Add Contact
+                                </button>
+                                <button class="btn btn-primary" onclick="syncFromTransactionHistory()">
+                                    <i class="fas fa-sync-alt me-1"></i> Sync from History
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <i class="fas fa-users fa-2x text-primary"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0">{{ contacts|length }}</h5>
+                                <p class="text-muted mb-0">Total Contacts</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <i class="fas fa-paper-plane fa-2x text-success"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0">{{ sent_to_count }}</h5>
+                                <p class="text-muted mb-0">Sent Money To</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <i class="fas fa-download fa-2x text-info"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0">{{ received_from_count }}</h5>
+                                <p class="text-muted mb-0">Received Money From</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <i class="fas fa-handshake fa-2x text-warning"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0">{{ both_ways_count }}</h5>
+                                <p class="text-muted mb-0">Both Ways</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="input-group">
+                            <span class="input-group-text bg-transparent border-0">
+                                <i class="fas fa-search text-muted"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control search-box" 
+                                   placeholder="Search contacts by name, phone, or UPI ID..."
+                                   id="searchContacts"
+                                   onkeyup="filterContacts()">
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <ul class="nav nav-tabs" id="contactsTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button">
+                                    <i class="fas fa-users me-1"></i> All Contacts
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="sent-tab" data-bs-toggle="tab" data-bs-target="#sent" type="button">
+                                    <i class="fas fa-paper-plane me-1"></i> Sent To
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="received-tab" data-bs-toggle="tab" data-bs-target="#received" type="button">
+                                    <i class="fas fa-download me-1"></i> Received From
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="recent-tab" data-bs-toggle="tab" data-bs-target="#recent" type="button">
+                                    <i class="fas fa-clock me-1"></i> Recent Interactions
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content" id="contactsTabContent">
+                            <!-- All Contacts Tab -->
+                            <div class="tab-pane fade show active" id="all">
+                                {% if contacts %}
+                                    <div class="row" id="allContactsList">
+                                        {% for contact in contacts %}
+                                        <div class="col-md-6 col-lg-4 contact-item" 
+                                             data-name="{{ contact.nickname|lower if contact.nickname else contact.username|lower }}"
+                                             data-phone="{{ contact.phone }}"
+                                             data-upi="{{ contact.upi_id|lower if contact.upi_id else '' }}">
+                                            {% include 'contact_card.html' %}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="empty-state">
+                                        <i class="fas fa-address-book"></i>
+                                        <h4>No contacts yet</h4>
+                                        <p class="text-muted">Add your first contact to make payments faster!</p>
+                                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addContactModal">
+                                            <i class="fas fa-user-plus me-1"></i> Add Your First Contact
+                                        </button>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Sent To Tab -->
+                            <div class="tab-pane fade" id="sent">
+                                {% if sent_to_contacts %}
+                                    <div class="row">
+                                        {% for contact in sent_to_contacts %}
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card contact-card">
+                                                <div class="card-body">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="contact-avatar me-3">
+                                                            {{ contact.username[0]|upper if contact.username else 'U' }}
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <h6 class="mb-1">
+                                                                {{ contact.nickname if contact.nickname else contact.username }}
+                                                                <span class="badge bg-success ms-1">Sent</span>
+                                                            </h6>
+                                                            <p class="text-muted mb-1 small">
+                                                                <i class="fas fa-phone me-1"></i>{{ contact.phone }}
+                                                            </p>
+                                                            {% if contact.upi_id %}
+                                                            <p class="text-muted mb-2 small">
+                                                                <i class="fas fa-qrcode me-1"></i>{{ contact.upi_id }}
+                                                            </p>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-3">
+                                                        <div class="d-flex justify-content-between small text-muted">
+                                                            <span>Transactions: {{ contact.transaction_count }}</span>
+                                                            <span>₹{{ "%.2f"|format(contact.total_amount) }}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-3 d-flex gap-2">
+                                                        <button class="btn btn-sm btn-outline-primary flex-grow-1" 
+                                                                onclick="sendToContact('{{ contact.phone }}', '{{ contact.username }}')">
+                                                            <i class="fas fa-paper-plane me-1"></i> Send
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-secondary" 
+                                                                onclick="viewHistory('{{ contact.phone }}')">
+                                                            <i class="fas fa-history"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="empty-state">
+                                        <i class="fas fa-paper-plane"></i>
+                                        <h4>No sent transactions yet</h4>
+                                        <p class="text-muted">You haven't sent money to anyone yet</p>
+                                        <a href="{{ url_for('send_money') }}" class="btn btn-primary">
+                                            <i class="fas fa-paper-plane me-1"></i> Send Money Now
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Received From Tab -->
+                            <div class="tab-pane fade" id="received">
+                                {% if received_from_contacts %}
+                                    <div class="row">
+                                        {% for contact in received_from_contacts %}
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card contact-card">
+                                                <div class="card-body">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="contact-avatar me-3" style="background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);">
+                                                            {{ contact.username[0]|upper if contact.username else 'U' }}
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <h6 class="mb-1">
+                                                                {{ contact.nickname if contact.nickname else contact.username }}
+                                                                <span class="badge bg-info ms-1">Received</span>
+                                                            </h6>
+                                                            <p class="text-muted mb-1 small">
+                                                                <i class="fas fa-phone me-1"></i>{{ contact.phone }}
+                                                            </p>
+                                                            {% if contact.upi_id %}
+                                                            <p class="text-muted mb-2 small">
+                                                                <i class="fas fa-qrcode me-1"></i>{{ contact.upi_id }}
+                                                            </p>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-3">
+                                                        <div class="d-flex justify-content-between small text-muted">
+                                                            <span>Transactions: {{ contact.transaction_count }}</span>
+                                                            <span>₹{{ "%.2f"|format(contact.total_amount) }}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-3 d-flex gap-2">
+                                                        <button class="btn btn-sm btn-outline-success flex-grow-1" 
+                                                                onclick="sendToContact('{{ contact.phone }}', '{{ contact.username }}')">
+                                                            <i class="fas fa-reply me-1"></i> Send Back
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-secondary" 
+                                                                onclick="viewHistory('{{ contact.phone }}')">
+                                                            <i class="fas fa-history"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="empty-state">
+                                        <i class="fas fa-download"></i>
+                                        <h4>No received transactions yet</h4>
+                                        <p class="text-muted">You haven't received money from anyone yet</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Recent Interactions Tab -->
+                            <div class="tab-pane fade" id="recent">
+                                {% if all_people %}
+                                    <div class="row">
+                                        {% for person in all_people %}
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="card contact-card">
+                                                <div class="card-body">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="contact-avatar me-3" 
+                                                             style="background: {% if person.interaction_type == 'both' %}linear-gradient(135deg, #FF9800 0%, #F57C00 100%){% elif person.interaction_type == 'sent' %}linear-gradient(135deg, #667eea 0%, #764ba2 100%){% else %}linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%){% endif %};">
+                                                            {{ person.username[0]|upper if person.username else 'U' }}
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <h6 class="mb-1">{{ person.username }}</h6>
+                                                            <p class="text-muted mb-1 small">
+                                                                <i class="fas fa-phone me-1"></i>{{ person.phone }}
+                                                            </p>
+                                                            <div class="d-flex gap-2">
+                                                                {% if person.sent_count > 0 %}
+                                                                <span class="badge bg-primary">
+                                                                    <i class="fas fa-paper-plane me-1"></i>{{ person.sent_count }} sent
+                                                                </span>
+                                                                {% endif %}
+                                                                {% if person.received_count > 0 %}
+                                                                <span class="badge bg-success">
+                                                                    <i class="fas fa-download me-1"></i>{{ person.received_count }} received
+                                                                </span>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-3">
+                                                        <div class="d-flex justify-content-between small text-muted">
+                                                            <span>Total: {{ person.total_interactions }}</span>
+                                                            <span>Net: ₹{{ "%.2f"|format(person.net_flow) }}</span>
+                                                        </div>
+                                                        <small class="text-muted">
+                                                            Last: {{ person.last_interaction[:10] }}
+                                                        </small>
+                                                    </div>
+                                                    <div class="mt-3 d-flex gap-2">
+                                                        <button class="btn btn-sm btn-primary flex-grow-1" 
+                                                                onclick="sendToContact('{{ person.phone }}', '{{ person.username }}')">
+                                                            <i class="fas fa-paper-plane me-1"></i> Send
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-secondary" 
+                                                                onclick="viewHistory('{{ person.phone }}')">
+                                                            <i class="fas fa-history"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="empty-state">
+                                        <i class="fas fa-handshake"></i>
+                                        <h4>No recent interactions</h4>
+                                        <p class="text-muted">Start sending or receiving money to see contacts here</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Contact Modal -->
+    <div class="modal fade" id="addContactModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-plus me-2"></i>Add New Contact
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addContactForm" onsubmit="addContact(event)">
+                        <div class="mb-3">
+                            <label class="form-label">Search by Phone or UPI ID</label>
+                            <div class="input-group">
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="contactSearch" 
+                                       placeholder="Enter phone number or UPI ID"
+                                       oninput="searchContact(this.value)">
+                                <button class="btn btn-outline-secondary" type="button" onclick="clearSearchField()">
+                                    Clear
+                                </button>
+                            </div>
+                            <div id="searchResults" class="mt-2" style="display: none;"></div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Contact Phone Number</label>
+                            <input type="tel" 
+                                   class="form-control" 
+                                   id="contactPhone" 
+                                   placeholder="10-digit mobile number" 
+                                   required
+                                   pattern="[6-9][0-9]{9}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Nickname (Optional)</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="contactNickname" 
+                                   placeholder="e.g., Mom, John, Rent">
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            The contact must be registered with EasyCash to be added
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitContactForm()">
+                        <i class="fas fa-save me-1"></i> Save Contact
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Contact Modal -->
+    <div class="modal fade" id="editContactModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>Edit Contact
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editContactForm">
+                        <input type="hidden" id="editContactPhone">
+                        <div class="mb-3">
+                            <label class="form-label">Current Name</label>
+                            <input type="text" class="form-control" id="currentName" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nickname</label>
+                            <input type="text" class="form-control" id="editNickname" placeholder="Enter nickname">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger me-auto" onclick="deleteContact()">
+                        <i class="fas fa-trash me-1"></i> Delete
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveContactChanges()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <button class="quick-action-btn mb-2" onclick="window.location.href='{{ url_for('send_money') }}'">
+            <i class="fas fa-paper-plane"></i>
+        </button>
+        <button class="quick-action-btn" data-bs-toggle="modal" data-bs-target="#addContactModal">
+            <i class="fas fa-user-plus"></i>
+        </button>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="position-fixed top-0 end-0 p-3" style="z-index: 1050">
+                {% for message in messages %}
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Error Display -->
+    {% if error %}
+        <div class="position-fixed top-0 end-0 p-3" style="z-index: 1050">
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                {{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Search contacts
+        function filterContacts() {
+            const searchTerm = document.getElementById('searchContacts').value.toLowerCase();
+            const contactItems = document.querySelectorAll('.contact-item');
+            
+            contactItems.forEach(item => {
+                const name = item.getAttribute('data-name');
+                const phone = item.getAttribute('data-phone');
+                const upi = item.getAttribute('data-upi');
+                
+                if (name.includes(searchTerm) || 
+                    phone.includes(searchTerm) || 
+                    upi.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+        
+        function clearSearch() {
+            document.getElementById('searchContacts').value = '';
+            filterContacts();
+        }
+        
+        // Search contact for adding
+        async function searchContact(query) {
+            if (query.length < 2) {
+                document.getElementById('searchResults').style.display = 'none';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/search-users?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                const resultsDiv = document.getElementById('searchResults');
+                resultsDiv.innerHTML = '';
+                
+                if (data.success && data.users.length > 0) {
+                    resultsDiv.style.display = 'block';
+                    data.users.forEach(user => {
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'card mb-2 cursor-pointer';
+                        resultItem.innerHTML = `
+                            <div class="card-body py-2" onclick="selectContact('${user.phone}', '${user.username || 'User'}')">
+                                <div class="d-flex align-items-center">
+                                    <div class="contact-avatar me-2" style="width: 30px; height: 30px; font-size: 14px;">
+                                        ${(user.username || 'U')[0].toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">${user.username || 'User'}</h6>
+                                        <small class="text-muted">${user.phone}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        resultsDiv.appendChild(resultItem);
+                    });
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+        }
+        
+        function selectContact(phone, username) {
+            document.getElementById('contactPhone').value = phone;
+            document.getElementById('contactNickname').value = username;
+            document.getElementById('searchResults').style.display = 'none';
+            document.getElementById('contactSearch').value = '';
+        }
+        
+        function clearSearchField() {
+            document.getElementById('contactSearch').value = '';
+            document.getElementById('searchResults').style.display = 'none';
+        }
+        
+        // Add contact
+        async function submitContactForm() {
+            const phone = document.getElementById('contactPhone').value.trim();
+            const nickname = document.getElementById('contactNickname').value.trim();
+            
+            if (!phone.match(/^[6-9]\d{9}$/)) {
+                alert('Please enter a valid 10-digit mobile number');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/contacts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        'action': 'add',
+                        'contact_phone': phone,
+                        'nickname': nickname
+                    })
+                });
+                
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    const data = await response.text();
+                    document.open();
+                    document.write(data);
+                    document.close();
+                }
+            } catch (error) {
+                alert('Error adding contact: ' + error.message);
+            }
+        }
+        
+        // Edit contact
+        function openEditModal(phone, name, nickname) {
+            document.getElementById('editContactPhone').value = phone;
+            document.getElementById('currentName').value = name;
+            document.getElementById('editNickname').value = nickname || '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('editContactModal'));
+            modal.show();
+        }
+        
+        async function saveContactChanges() {
+            const phone = document.getElementById('editContactPhone').value;
+            const nickname = document.getElementById('editNickname').value.trim();
+            
+            try {
+                // You would need to implement this endpoint
+                const response = await fetch(`/api/contacts/${phone}/nickname`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ nickname })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('Contact updated successfully!');
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error updating contact: ' + error.message);
+            }
+        }
+        
+        async function deleteContact() {
+            if (!confirm('Are you sure you want to delete this contact?')) {
+                return;
+            }
+            
+            const phone = document.getElementById('editContactPhone').value;
+            
+            try {
+                // You would need to implement this endpoint
+                const response = await fetch(`/api/contacts/${phone}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('Contact deleted successfully!');
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error deleting contact: ' + error.message);
+            }
+        }
+        
+        // Quick actions
+        function sendToContact(phone, name) {
+            sessionStorage.setItem('quickSendPhone', phone);
+            sessionStorage.setItem('quickSendName', name);
+            window.location.href = '{{ url_for('send_money') }}';
+        }
+        
+        function viewHistory(identifier) {
+            window.location.href = `{{ url_for('person_history', contact_identifier='') }}${identifier}`;
+        }
+        
+        async function syncFromTransactionHistory() {
+            if (!confirm('This will scan your transaction history and add people you\'ve interacted with as contacts. Continue?')) {
+                return;
+            }
+            
+            try {
+                // You would need to implement this endpoint
+                const response = await fetch('/api/contacts/sync-from-history', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert(`Added ${data.added_count} new contacts from your transaction history!`);
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error syncing contacts: ' + error.message);
+            }
+        }
+        
+        // Load quick send data if available
+        document.addEventListener('DOMContentLoaded', function() {
+            const quickSendPhone = sessionStorage.getItem('quickSendPhone');
+            const quickSendName = sessionStorage.getItem('quickSendName');
+            
+            if (quickSendPhone && quickSendName) {
+                sessionStorage.removeItem('quickSendPhone');
+                sessionStorage.removeItem('quickSendName');
+                
+                // Auto-fill send money page if we came from quick send
+                if (window.location.pathname.includes('/send-money')) {
+                    setTimeout(() => {
+                        const methodSelect = document.querySelector('[name="payment_method"]');
+                        const identifierInput = document.querySelector('[name="identifier"]');
+                        
+                        if (methodSelect && identifierInput) {
+                            methodSelect.value = 'mobile';
+                            identifierInput.value = quickSendPhone;
+                            
+                            // Trigger validation
+                            const event = new Event('change');
+                            methodSelect.dispatchEvent(event);
+                        }
+                    }, 500);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

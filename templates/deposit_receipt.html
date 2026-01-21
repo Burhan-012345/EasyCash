@@ -1,0 +1,584 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="receipt-container">
+    <!-- Receipt Header -->
+    <div class="receipt-header">
+        <a href="{{ url_for('deposit_success') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i>
+            Back to Deposit
+        </a>
+        <div class="header-title">
+            <h1>Deposit Receipt</h1>
+            <p class="subtitle">Transaction ID: {{ transaction.transaction_id if transaction else 'N/A' }}</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-primary" onclick="window.print()">
+                <i class="fas fa-print"></i>
+                Print
+            </button>
+            <button class="btn-secondary" onclick="downloadPDF()">
+                <i class="fas fa-download"></i>
+                Download PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Receipt Content -->
+    <div class="receipt-content">
+        <!-- Company Header -->
+        <div class="receipt-company">
+            <h2><i class="fas fa-wallet"></i> EasyCash</h2>
+            <p>Digital Wallet Service</p>
+            <p>Transaction Receipt</p>
+        </div>
+
+        <!-- Transaction Details -->
+        <div class="receipt-section">
+            <h3><i class="fas fa-info-circle"></i> Transaction Details</h3>
+            <div class="receipt-details">
+                <div class="detail-row">
+                    <span class="label">Receipt Number:</span>
+                    <span class="value">{{ receipt_number }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Transaction ID:</span>
+                    <span class="value">{{ transaction.transaction_id if transaction else 'N/A' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Date & Time:</span>
+                    <span class="value">{{ transaction_date.strftime('%d %b %Y at %I:%M %p') }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Transaction Type:</span>
+                    <span class="value badge-success">Deposit</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Status:</span>
+                    <span class="value status-success">Completed</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Amount Section -->
+        <div class="receipt-section amount-section">
+            <h3><i class="fas fa-money-bill-wave"></i> Amount Details</h3>
+            <div class="receipt-details">
+                <div class="detail-row">
+                    <span class="label">Amount Deposited:</span>
+                    <span class="value amount-positive">+₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Processing Fee:</span>
+                    <span class="value">₹0.00</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">GST (0%):</span>
+                    <span class="value">₹0.00</span>
+                </div>
+                <div class="detail-row total-row">
+                    <span class="label">Total Amount:</span>
+                    <span class="value total-amount">₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Details -->
+        <div class="receipt-section">
+            <h3><i class="fas fa-user-circle"></i> Account Details</h3>
+            <div class="receipt-details">
+                <div class="detail-row">
+                    <span class="label">Account Holder:</span>
+                    <span class="value">{{ user.username if user else 'N/A' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Phone Number:</span>
+                    <span class="value">{{ user.phone if user else 'N/A' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">UPI ID:</span>
+                    <span class="value">{{ user.upi_id if user and user.upi_id else 'Not set' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Account Created:</span>
+                    <span class="value">{{ user.created_at[:10] if user else 'N/A' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Balance Update -->
+        <div class="receipt-section">
+            <h3><i class="fas fa-chart-line"></i> Balance Update</h3>
+            <div class="receipt-details">
+                <div class="detail-row">
+                    <span class="label">Previous Balance:</span>
+                    <span class="value">₹{{ "%.2f"|format(previous_balance) }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Deposit Amount:</span>
+                    <span class="value amount-positive">+₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}</span>
+                </div>
+                <div class="detail-row total-row">
+                    <span class="label">Current Balance:</span>
+                    <span class="value total-amount">₹{{ "%.2f"|format(user.balance) if user else '0.00' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="receipt-section">
+            <h3><i class="fas fa-credit-card"></i> Payment Method</h3>
+            <div class="receipt-details">
+                <div class="detail-row">
+                    <span class="label">Method:</span>
+                    <span class="value">Wallet Top-up</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Channel:</span>
+                    <span class="value">Direct Deposit</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Reference:</span>
+                    <span class="value">{{ transaction.transaction_id[:12]|upper if transaction else 'N/A' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security Info -->
+        <div class="receipt-section security-info">
+            <h3><i class="fas fa-shield-alt"></i> Security Information</h3>
+            <div class="security-list">
+                <div class="security-item">
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>Transaction secured with 256-bit encryption</span>
+                </div>
+                <div class="security-item">
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>Funds credited instantly</span>
+                </div>
+                <div class="security-item">
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>Receipt stored in your account records</span>
+                </div>
+                <div class="security-item">
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>Dispute period: 24 hours from transaction</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="receipt-footer">
+            <div class="footer-content">
+                <p>This is an electronic receipt. No signature required.</p>
+                <p>Thank you for using EasyCash!</p>
+                <p class="footer-contact">
+                    <i class="fas fa-headset"></i> Support: support@easycash.com | 
+                    <i class="fas fa-phone"></i> 1800-123-456
+                </p>
+                <p class="footer-note">
+                    <small>Generated on {{ current_time.strftime('%d %b %Y at %I:%M %p') }}</small>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="receipt-actions">
+        <button class="btn-primary" onclick="window.print()">
+            <i class="fas fa-print"></i> Print Receipt
+        </button>
+        <button class="btn-secondary" onclick="shareReceipt()">
+            <i class="fas fa-share-alt"></i> Share
+        </button>
+        <a href="{{ url_for('dashboard') }}" class="btn-outline">
+            <i class="fas fa-home"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<style>
+.receipt-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f8f9fa;
+    min-height: 100vh;
+}
+
+.receipt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.receipt-header .header-title {
+    flex: 1;
+    text-align: center;
+}
+
+.receipt-header .header-title h1 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.receipt-header .header-title .subtitle {
+    color: #7f8c8d;
+    margin: 5px 0 0 0;
+}
+
+.receipt-content {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.receipt-company {
+    text-align: center;
+    margin-bottom: 40px;
+    padding-bottom: 30px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.receipt-company h2 {
+    color: #3498db;
+    margin-bottom: 10px;
+    font-size: 32px;
+}
+
+.receipt-company p {
+    color: #7f8c8d;
+    margin: 5px 0;
+}
+
+.receipt-section {
+    margin-bottom: 30px;
+    padding-bottom: 25px;
+    border-bottom: 1px dashed #e0e0e0;
+}
+
+.receipt-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.receipt-section h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.receipt-details {
+    display: grid;
+    gap: 15px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-row .label {
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.detail-row .value {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.detail-row .amount-positive {
+    color: #27ae60;
+}
+
+.detail-row .status-success {
+    color: #27ae60;
+    background: rgba(39, 174, 96, 0.1);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+.total-row {
+    border-top: 2px solid #3498db;
+    margin-top: 10px;
+    padding-top: 15px;
+}
+
+.total-amount {
+    font-size: 20px;
+    color: #2c3e50;
+}
+
+.amount-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.security-info {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 25px;
+    border-radius: 8px;
+    margin-top: 30px;
+}
+
+.security-info h3 {
+    color: white;
+    margin-bottom: 20px;
+}
+
+.security-list {
+    display: grid;
+    gap: 15px;
+}
+
+.security-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.security-item i {
+    font-size: 16px;
+}
+
+.receipt-footer {
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 2px solid #f0f0f0;
+    text-align: center;
+    color: #7f8c8d;
+}
+
+.footer-content p {
+    margin: 8px 0;
+}
+
+.footer-contact {
+    margin-top: 20px !important;
+    color: #3498db;
+}
+
+.footer-note {
+    margin-top: 20px !important;
+    font-style: italic;
+}
+
+.receipt-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 20px;
+}
+
+.badge-success {
+    background: rgba(39, 174, 96, 0.1);
+    color: #27ae60;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+/* Print styles */
+@media print {
+    .receipt-header,
+    .receipt-actions,
+    .btn-back {
+        display: none !important;
+    }
+    
+    .receipt-container {
+        background: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    .receipt-content {
+        box-shadow: none !important;
+        padding: 20px !important;
+    }
+    
+    body {
+        font-size: 12px !important;
+    }
+    
+    .receipt-company h2 {
+        font-size: 24px !important;
+    }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .receipt-container {
+        padding: 15px;
+    }
+    
+    .receipt-content {
+        padding: 20px;
+    }
+    
+    .receipt-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .receipt-actions {
+        flex-direction: column;
+    }
+    
+    .receipt-actions button,
+    .receipt-actions a {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .detail-row .value {
+        margin-left: 20px;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-scroll to top
+    window.scrollTo(0, 0);
+    
+    // Generate receipt number
+    generateReceiptNumber();
+});
+
+function generateReceiptNumber() {
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2);
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    
+    const receiptNumber = `EC${year}${month}${day}${random}`;
+    
+    // Display receipt number in the template
+    const receiptNumberElement = document.querySelector('.detail-row .value:nth-child(2)');
+    if (receiptNumberElement && receiptNumberElement.textContent.includes('Receipt Number')) {
+        // We need to update the receipt number in the template
+        console.log('Receipt Number:', receiptNumber);
+    }
+}
+
+function downloadPDF() {
+    showToast('Generating PDF receipt...', 'info');
+    
+    // Generate PDF using the API endpoint
+    const transactionId = '{{ transaction.transaction_id if transaction else "" }}';
+    if (transactionId) {
+        window.location.href = `/download-transaction/${transactionId}`;
+    } else {
+        // Fallback to generic receipt download
+        window.location.href = '/download-receipt?filter=deposit&date_range=today';
+    }
+}
+
+function shareReceipt() {
+    const transactionId = '{{ transaction.transaction_id if transaction else "" }}';
+    const amount = '{{ "%.2f"|format(transaction.amount) if transaction else "0.00" }}';
+    const date = '{{ transaction_date.strftime("%d %b %Y at %I:%M %p") }}';
+    
+    const shareData = {
+        title: 'EasyCash Deposit Receipt',
+        text: `I deposited ₹${amount} to my EasyCash wallet on ${date}. Transaction ID: ${transactionId}`,
+        url: window.location.href,
+    };
+    
+    if (navigator.share && navigator.canShare(shareData)) {
+        navigator.share(shareData)
+            .then(() => showToast('Receipt shared successfully', 'success'))
+            .catch(err => {
+                if (err.name !== 'AbortError') {
+                    console.error('Share failed:', err);
+                    copyToClipboard(shareData.text);
+                    showToast('Receipt details copied to clipboard', 'info');
+                }
+            });
+    } else {
+        copyToClipboard(shareData.text);
+        showToast('Receipt details copied to clipboard', 'info');
+    }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        console.log('Text copied to clipboard');
+    }).catch(err => {
+        console.error('Failed to copy text:', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+    });
+}
+
+function showToast(message, type = 'info') {
+    // Remove existing toast
+    const existingToast = document.querySelector('.toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    // Add toast to body
+    document.body.appendChild(toast);
+    
+    // Show toast
+    setTimeout(() => toast.classList.add('show'), 10);
+    
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 300);
+    }, 3000);
+}
+</script>
+{% endblock %}

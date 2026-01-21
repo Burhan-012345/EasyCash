@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyCash - Receipt Preview</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .receipt-container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .receipt-header {
+            background: linear-gradient(135deg, #2C3E50 0%, #4A6491 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .receipt-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.1;
+        }
+
+        .logo {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .logo i {
+            color: #3498db;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .receipt-body {
+            padding: 30px;
+        }
+
+        .user-info {
+            background: #F8F9FA;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 4px solid #3498db;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .info-item {
+            margin-bottom: 10px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2C3E50;
+        }
+
+        .filter-info {
+            background: #E8F4FC;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .filter-info i {
+            color: #3498db;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+            border: 1px solid #eee;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .summary-card.deposit {
+            border-top: 4px solid #27ae60;
+        }
+
+        .summary-card.withdraw {
+            border-top: 4px solid #e74c3c;
+        }
+
+        .summary-card.net {
+            border-top: 4px solid #3498db;
+        }
+
+        .summary-card.total {
+            border-top: 4px solid #9b59b6;
+        }
+
+        .summary-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .deposit .summary-icon {
+            color: #27ae60;
+        }
+
+        .withdraw .summary-icon {
+            color: #e74c3c;
+        }
+
+        .net .summary-icon {
+            color: #3498db;
+        }
+
+        .total .summary-icon {
+            color: #9b59b6;
+        }
+
+        .summary-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .summary-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .transactions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .transactions-table th {
+            background: #2C3E50;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 12px;
+        }
+
+        .transactions-table tr {
+            border-bottom: 1px solid #eee;
+        }
+
+        .transactions-table tr:nth-child(even) {
+            background: #F8F9FA;
+        }
+
+        .transactions-table td {
+            padding: 15px;
+            color: #333;
+        }
+
+        .transaction-type {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .transaction-type.deposit {
+            background: rgba(39, 174, 96, 0.1);
+            color: #27ae60;
+        }
+
+        .transaction-type.withdraw {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+
+        .amount {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .amount.deposit {
+            color: #27ae60;
+        }
+
+        .amount.withdraw {
+            color: #e74c3c;
+        }
+
+        .receipt-footer {
+            background: #F8F9FA;
+            padding: 25px;
+            text-align: center;
+            border-top: 1px solid #eee;
+        }
+
+        .footer-text {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 30px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2980b9 0%, #1f6396 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60 0%, #219653 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #219653 0%, #1e8449 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(39, 174, 96, 0.3);
+        }
+
+        .watermark {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.1);
+            font-size: 120px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: -1;
+            user-select: none;
+        }
+
+        .no-transactions {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+
+        .no-transactions i {
+            font-size: 60px;
+            margin-bottom: 20px;
+            color: #BDC3C7;
+        }
+
+        .date-badge {
+            display: inline-block;
+            background: #E8F4FC;
+            color: #3498db;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        @media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+            }
+            
+            .receipt-container {
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                max-width: 100% !important;
+            }
+            
+            .action-buttons,
+            .btn {
+                display: none !important;
+            }
+            
+            .print-only {
+                display: block;
+                text-align: center;
+                margin-top: 30px;
+                color: #666;
+                font-size: 12px;
+            }
+            
+            .watermark {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .receipt-container {
+                margin: 10px;
+            }
+            
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .transactions-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="watermark">EasyCash</div>
+    
+    <div class="receipt-container">
+        <div class="receipt-header">
+            <div class="logo">
+                <i class="fas fa-wallet"></i>
+                EasyCash
+            </div>
+            <div class="subtitle">Digital Wallet Transaction Statement</div>
+        </div>
+        
+        <div class="receipt-body">
+            <div class="user-info">
+                <h3 style="margin-bottom: 20px; color: #2C3E50;">Account Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Account Holder</div>
+                        <div class="info-value">{{ username }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Generated On</div>
+                        <div class="info-value">{{ generated_date }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Current Balance</div>
+                        <div class="info-value">₹{{ "%.2f"|format(current_balance) }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Statement Period</div>
+                        <div class="info-value">
+                            {% if date_range == 'all' %}
+                                All Time
+                            {% elif date_range == 'today' %}
+                                Today
+                            {% elif date_range == 'week' %}
+                                Last 7 Days
+                            {% elif date_range == 'month' %}
+                                Last 30 Days
+                            {% else %}
+                                Custom
+                            {% endif %}
+                            <span class="date-badge">{{ filter_type|title }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if transactions %}
+            <div class="filter-info">
+                <i class="fas fa-filter"></i>
+                Showing {{ total_transactions }} transactions 
+                {% if filter_type != 'all' %}
+                ({{ filter_type|title }} only)
+                {% endif %}
+                {% if date_range != 'all' %}
+                for the selected period
+                {% endif %}
+            </div>
+            
+            <div class="summary-cards">
+                <div class="summary-card total">
+                    <i class="fas fa-receipt summary-icon"></i>
+                    <div class="summary-value">{{ total_transactions }}</div>
+                    <div class="summary-label">Total Transactions</div>
+                </div>
+                
+                <div class="summary-card deposit">
+                    <i class="fas fa-arrow-down summary-icon"></i>
+                    <div class="summary-value">₹{{ "%.2f"|format(total_deposits) }}</div>
+                    <div class="summary-label">Total Deposits</div>
+                </div>
+                
+                <div class="summary-card withdraw">
+                    <i class="fas fa-arrow-up summary-icon"></i>
+                    <div class="summary-value">₹{{ "%.2f"|format(total_withdrawals) }}</div>
+                    <div class="summary-label">Total Withdrawals</div>
+                </div>
+                
+                <div class="summary-card net">
+                    <i class="fas fa-exchange-alt summary-icon"></i>
+                    <div class="summary-value">
+                        {% if net_flow >= 0 %}
+                        +₹{{ "%.2f"|format(net_flow) }}
+                        {% else %}
+                        -₹{{ "%.2f"|format(-net_flow) }}
+                        {% endif %}
+                    </div>
+                    <div class="summary-label">Net Flow</div>
+                </div>
+            </div>
+            
+            <div style="overflow-x: auto;">
+                <table class="transactions-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Transaction ID</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Balance After</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td>
+                                {{ transaction.date_time[:10] }}<br>
+                                <small style="color: #666;">{{ transaction.date_time[11:16] }}</small>
+                            </td>
+                            <td>
+                                <small>{{ transaction.transaction_id[:8] }}...</small>
+                            </td>
+                            <td>
+                                <span class="transaction-type {{ transaction.type }}">
+                                    {{ transaction.type|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="amount {{ transaction.type }}">
+                                    {% if transaction.type == 'deposit' %}+{% else %}-{% endif %}
+                                    ₹{{ "%.2f"|format(transaction.amount) }}
+                                </span>
+                            </td>
+                            <td>₹{{ "%.2f"|format(transaction.balance_after) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% else %}
+            <div class="no-transactions">
+                <i class="fas fa-file-invoice"></i>
+                <h3 style="margin-bottom: 10px; color: #666;">No Transactions Found</h3>
+                <p>No transactions match the selected filters.</p>
+            </div>
+            {% endif %}
+            
+            <div class="print-only">
+                This document was generated electronically by EasyCash.
+            </div>
+        </div>
+        
+        <div class="receipt-footer">
+            <div class="footer-text">
+                <i class="fas fa-shield-alt" style="color: #3498db; margin-right: 5px;"></i>
+                This is an electronically generated statement. No signature is required.<br>
+                For any discrepancies, please contact support within 7 days of receiving this statement.
+            </div>
+            
+            <div class="action-buttons">
+                <button onclick="window.print()" class="btn btn-primary">
+                    <i class="fas fa-print"></i>
+                    Print / Save as PDF
+                </button>
+                
+                <a href="/download-receipt?filter={{ filter_type }}&date_range={{ date_range }}" 
+                   class="btn btn-success" download>
+                    <i class="fas fa-download"></i>
+                    Download PDF
+                </a>
+                
+                <a href="/transactions" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Transactions
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add animation to summary cards
+            const cards = document.querySelectorAll('.summary-card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.style.animation = 'slideUp 0.5s ease-out forwards';
+                card.style.opacity = '0';
+            });
+            
+            // Auto-scroll to top
+            window.scrollTo(0, 0);
+            
+            // Print shortcut
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                    e.preventDefault();
+                    window.print();
+                }
+            });
+            
+            // Show success message if PDF was just downloaded
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('downloaded') === 'true') {
+                alert('PDF downloaded successfully!');
+            }
+        });
+        
+        // Function to download PDF
+        function downloadPDF() {
+            const downloadLink = document.querySelector('a[href*="/download-receipt"]');
+            if (downloadLink) {
+                // Open in new tab to start download
+                window.open(downloadLink.href, '_blank');
+                
+                // Show notification
+                showNotification('PDF download started...', 'success');
+            }
+        }
+        
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#27ae60' : '#e74c3c'};
+                color: white;
+                padding: 15px 25px;
+                border-radius: 10px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                z-index: 1000;
+                animation: slideInRight 0.3s ease-out;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease-out forwards';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+        
+        // Add CSS animations for notifications
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOutRight {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

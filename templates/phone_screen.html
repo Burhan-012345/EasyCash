@@ -1,0 +1,2066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyCash - Phone Verification</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="EasyCash">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="EasyCash">
+    <meta name="description" content="ATM-style digital wallet with phone-based authentication">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-TileColor" content="#1a73e8">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="theme-color" content="#121212">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Phone Screen Specific Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #121212;
+            color: #ffffff;
+            min-height: 100vh;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .auth-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            background: #121212;
+            position: relative;
+        }
+        
+        /* PWA Install Button */
+        .pwa-install-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .pwa-install-button {
+            display: none; /* Hidden by default, shown via JavaScript */
+            background: linear-gradient(135deg, #34a853, #0d8d2d);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            animation: pulse 2s infinite;
+        }
+        
+        .pwa-install-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 168, 83, 0.4);
+        }
+        
+        .pwa-install-button i {
+            font-size: 16px;
+        }
+        
+        .pwa-install-button .install-text {
+            display: inline;
+        }
+        
+        .pwa-install-button .installed-text {
+            display: none;
+        }
+        
+        /* REMOVED: Installed state styling since we'll hide the button completely */
+        
+        .pwa-install-prompt {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1e1e1e;
+            padding: 20px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            display: none;
+            animation: slideUp 0.3s ease;
+            border-top: 2px solid #1a73e8;
+        }
+        
+        .pwa-install-prompt.active {
+            display: block;
+        }
+        
+        .pwa-prompt-content {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        
+        .pwa-prompt-info {
+            flex: 1;
+        }
+        
+        .pwa-prompt-title {
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .pwa-prompt-desc {
+            color: #b0b0b0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .pwa-prompt-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-pwa-install {
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-pwa-install:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+        }
+        
+        .btn-pwa-later {
+            background: transparent;
+            border: 1px solid #444;
+            color: #b0b0b0;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-pwa-later:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+        
+        .pwa-instructions {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .pwa-instructions.active {
+            display: flex;
+        }
+        
+        .pwa-instructions-content {
+            background: #1e1e1e;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        
+        .pwa-instructions-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .pwa-instructions-header h3 {
+            color: white;
+            font-size: 22px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .pwa-instructions-header p {
+            color: #b0b0b0;
+            font-size: 14px;
+        }
+        
+        .pwa-instruction-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        
+        .pwa-instruction-step:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .step-number {
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+        
+        .step-content h4 {
+            color: white;
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .step-content p {
+            color: #b0b0b0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .step-icon {
+            color: #1a73e8;
+            font-size: 16px;
+        }
+        
+        .pwa-instructions-footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #3a3a3a;
+        }
+        
+        .app-header {
+            text-align: center;
+            margin-bottom: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .app-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .app-logo i {
+            font-size: 42px;
+            color: #1a73e8;
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .app-logo h1 {
+            font-size: 32px;
+            color: white;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .app-tagline {
+            color: #b0b0b0;
+            font-size: 16px;
+            opacity: 0.8;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Auto-login prompt */
+        .auto-login-prompt {
+            background: #2d2d2d;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 20px 0 30px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid #3a3a3a;
+        }
+
+        .auto-login-prompt p {
+            color: #b0b0b0;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .auto-login-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn-auto-login {
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-auto-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-cancel-auto {
+            background: transparent;
+            border: 1px solid #444;
+            color: #b0b0b0;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancel-auto:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+        
+        .auth-card {
+            background: #1e1e1e;
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .auth-card h2 {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        
+        .auth-subtitle {
+            color: #b0b0b0;
+            text-align: center;
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+        
+        .error-message {
+            background: rgba(234, 67, 53, 0.1);
+            color: #ea4335;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(234, 67, 53, 0.3);
+        }
+        
+        .form-group {
+            margin-bottom: 24px;
+        }
+        
+        .form-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: #b0b0b0;
+            font-size: 14px;
+        }
+        
+        .phone-input-wrapper {
+            display: flex;
+            align-items: center;
+            background: #2d2d2d;
+            border: 2px solid #3a3a3a;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .phone-input-wrapper:focus-within {
+            border-color: #1a73e8;
+            background: #1e1e1e;
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2);
+        }
+        
+        .country-code {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 500;
+            color: white;
+            background: #2d2d2d;
+            min-width: 70px;
+            border-right: 2px solid #3a3a3a;
+            transition: all 0.3s ease;
+        }
+        
+        .phone-input-wrapper:focus-within .country-code {
+            background: #1e1e1e;
+            border-right-color = '#1a73e8';
+        }
+        
+        .phone-input {
+            flex: 1;
+            padding: 16px;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+            font-family: 'Google Sans', sans-serif;
+            width: 100%;
+            outline: none;
+        }
+        
+        .phone-input::placeholder {
+            color: #666;
+            font-weight: normal;
+            opacity: 0.7;
+        }
+        
+        .input-hint {
+            font-size: 12px;
+            color: #b0b0b0;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .terms-checkbox-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 24px 0;
+            padding: 12px;
+            background: #2d2d2d;
+            border-radius: 8px;
+        }
+        
+        .terms-checkbox {
+            margin-top: 3px;
+            accent-color: #1a73e8;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .terms-label {
+            flex: 1;
+            font-size: 14px;
+            color: #b0b0b0;
+            line-height: 1.5;
+        }
+        
+        .terms-label a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .terms-label a:hover {
+            color: #4285f4;
+            text-decoration: underline;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            margin-top: 8px;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 32px 0;
+            color: #b0b0b0;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #3a3a3a;
+        }
+        
+        .divider span {
+            padding: 0 16px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .alternative-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .btn-secondary {
+            background: #2d2d2d;
+            color: white;
+            border: 1px solid #444;
+            padding: 16px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: #333;
+            border-color: #1a73e8;
+        }
+        
+        .btn-help {
+            background: transparent;
+            border: none;
+            color: #1a73e8;
+            padding: 16px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            transition: color 0.3s ease;
+        }
+        
+        .btn-help:hover {
+            color: #4285f4;
+        }
+        
+        .security-info {
+            background: #1e1e1e;
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 20px;
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .security-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .security-header i {
+            font-size: 24px;
+            color: #34a853;
+        }
+        
+        .security-header h4 {
+            color: white;
+            margin: 0;
+            font-size: 18px;
+        }
+        
+        .security-list {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+        
+        .security-list li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        
+        .security-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .security-list i {
+            color: #34a853;
+            font-size: 14px;
+        }
+        
+        .security-list span {
+            font-size: 14px;
+            color: #b0b0b0;
+            flex: 1;
+        }
+        
+        .auth-footer {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #3a3a3a;
+            text-align: center;
+            color: #b0b0b0;
+            font-size: 12px;
+            line-height: 1.6;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .auth-footer p {
+            margin-bottom: 4px;
+        }
+        
+        .auth-footer p:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 4000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #1e1e1e;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+        }
+        
+        .modal-header i {
+            color: #1a73e8;
+        }
+        
+        .close-modal {
+            background: #2d2d2d;
+            border: none;
+            color: #b0b0b0;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .close-modal:hover {
+            background: #ea4335;
+            color: white;
+            transform: rotate(90deg);
+        }
+        
+        .modal-body {
+            color: #b0b0b0;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            font-size: 14px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .modal-body::-webkit-scrollbar-track {
+            background: #2d2d2d;
+            border-radius: 3px;
+        }
+        
+        .modal-body::-webkit-scrollbar-thumb {
+            background: #1a73e8;
+            border-radius: 3px;
+        }
+        
+        .modal-body h4 {
+            color: white;
+            margin: 20px 0 10px 0;
+            font-size: 16px;
+        }
+        
+        .modal-body p {
+            margin-bottom: 15px;
+        }
+        
+        .modal-body ul {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .modal-body li {
+            margin-bottom: 8px;
+            padding-left: 5px;
+        }
+        
+        .modal-footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #3a3a3a;
+        }
+        
+        /* Help Modal */
+        .help-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 4001;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .help-modal.active {
+            display: flex;
+        }
+        
+        .help-content {
+            background: #1e1e1e;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 400px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }
+        
+        .help-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        
+        .help-header h3 {
+            margin: 0;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+        }
+        
+        .close-help {
+            background: #2d2d2d;
+            border: none;
+            color: #b0b0b0;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .close-help:hover {
+            background: #ea4335;
+            color: white;
+            transform: rotate(90deg);
+        }
+        
+        .help-body {
+            color: #b0b0b0;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+        
+        .help-body p {
+            margin-bottom: 16px;
+        }
+        
+        .help-body strong {
+            color: white;
+        }
+        
+        .help-body ul {
+            padding-left: 20px;
+            margin-bottom: 16px;
+        }
+        
+        .help-body li {
+            margin-bottom: 8px;
+        }
+        
+        .help-support-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 12px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .help-support-link:hover {
+            background: rgba(26, 115, 232, 0.1);
+            transform: translateX(4px);
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 480px) {
+            .auth-container {
+                padding: 16px;
+            }
+            
+            .auth-card {
+                padding: 24px;
+            }
+            
+            .app-logo h1 {
+                font-size: 28px;
+            }
+            
+            .app-tagline {
+                font-size: 14px;
+            }
+            
+            .auto-login-prompt {
+                padding: 14px;
+            }
+            
+            .auto-login-actions {
+                flex-direction: column;
+            }
+            
+            .btn-auto-login,
+            .btn-cancel-auto {
+                width: 100%;
+            }
+            
+            .auth-card h2 {
+                font-size: 20px;
+            }
+            
+            .phone-input {
+                font-size: 16px;
+                padding: 14px;
+            }
+            
+            .country-code {
+                font-size: 16px;
+                padding: 14px;
+                min-width: 60px;
+            }
+            
+            .modal-content,
+            .help-content {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .modal-body {
+                font-size: 13px;
+            }
+            
+            .pwa-install-container {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin-bottom: 20px;
+            }
+            
+            .pwa-prompt-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .pwa-prompt-actions {
+                width: 100%;
+            }
+            
+            .btn-pwa-install,
+            .btn-pwa-later {
+                flex: 1;
+            }
+        }
+        
+        /* Tablet Responsive */
+        @media (min-width: 481px) and (max-width: 768px) {
+            .pwa-prompt-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+            
+            .pwa-prompt-actions {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <!-- PWA Install Button (Top Right) - Will be hidden when app is installed -->
+        <div class="pwa-install-container">
+            <button class="pwa-install-button" id="pwaInstallButton">
+                <i class="fas fa-download"></i>
+                <span class="install-text">Install App</span>
+            </button>
+        </div>
+
+        <!-- App Header -->
+        <div class="app-header">
+            <div class="app-logo">
+                <i class="fas fa-wallet"></i>
+                <h1>EasyCash</h1>
+            </div>
+            <p class="app-tagline">ATM-style Digital Wallet</p>
+
+            <!-- Auto-login prompt (only shown when coming from switch-account) -->
+            {% if request.args.get('switch') == 'true' %}
+            <div class="auto-login-prompt">
+                <p>You've switched accounts. Enter a new phone number to continue.</p>
+                <div class="auto-login-actions">
+                    <button class="btn-cancel-auto" onclick="continueWithNewAccount()">
+                        <i class="fas fa-user-plus"></i> Continue with New Account
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Auth Card -->
+        <div class="auth-card">
+            <h2>Enter Your Phone Number</h2>
+            <p class="auth-subtitle">We'll send you a verification code</p>
+
+            <!-- Error Message -->
+            {% if error %}
+            <div class="error-message">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="errorText">{{ error }}</span>
+            </div>
+            {% else %}
+            <div class="error-message" style="display: none;">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="errorText"></span>
+            </div>
+            {% endif %}
+
+            <!-- Phone Form -->
+            <form method="POST" action="/" class="auth-form" id="phoneForm">
+                <div class="form-group">
+                    <label for="phone">
+                        <i class="fas fa-mobile-alt"></i>
+                        Mobile Number
+                    </label>
+                    
+                    <div class="phone-input-wrapper">
+                        <div class="country-code">+91</div>
+                        <input 
+                            type="tel" 
+                            id="phone" 
+                            name="phone" 
+                            class="phone-input"
+                            placeholder="9876543210" 
+                            pattern="[6-9][0-9]{9}"
+                            maxlength="10"
+                            required
+                            autofocus
+                            autocomplete="tel"
+                            inputmode="numeric"
+                            value="{% if request.args.get('switch') != 'true' %}{{ session.get('last_phone', '') }}{% endif %}"
+                        >
+                    </div>
+                    
+                    <p class="input-hint">
+                        <i class="fas fa-info-circle"></i>
+                        Enter your 10-digit mobile number starting with 6-9
+                    </p>
+                </div>
+
+                <!-- Terms and Conditions -->
+                <div class="terms-checkbox-container">
+                    <input type="checkbox" id="terms" name="terms" required class="terms-checkbox">
+                    <label for="terms" class="terms-label">
+                        I agree to the 
+                        <a href="#" onclick="showTermsModal(); return false;">Terms of Service</a> 
+                        and 
+                        <a href="#" onclick="showPrivacyModal(); return false;">Privacy Policy</a>
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-arrow-right"></i>
+                    Continue
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="divider">
+                <span>OR</span>
+            </div>
+
+            <!-- Alternative Actions -->
+            <div class="alternative-actions">
+                {% if session.get('last_phone') %}
+                <button type="button" class="btn-secondary" onclick="tryAutoLogin()">
+                    <i class="fas fa-history"></i>
+                    Try Auto Login
+                </button>
+                {% endif %}
+                <button type="button" class="btn-help" onclick="showHelp()">
+                    <i class="fas fa-question-circle"></i>
+                    Need Help?
+                </button>
+            </div>
+        </div>
+
+        <!-- Security Info -->
+        <div class="security-info">
+            <div class="security-header">
+                <i class="fas fa-shield-alt"></i>
+                <h4>Safe & Secure</h4>
+            </div>
+            
+            <ul class="security-list">
+                <li>
+                    <i class="fas fa-lock"></i>
+                    <span>Bank-level security with 256-bit encryption</span>
+                </li>
+                <li>
+                    <i class="fas fa-user-shield"></i>
+                    <span>Your data is protected and never shared</span>
+                </li>
+                <li>
+                    <i class="fas fa-bolt"></i>
+                    <span>Instant verification & setup</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Auth Footer -->
+        <div class="auth-footer">
+            <p>By continuing, you agree to our Terms and Privacy Policy</p>
+            <p>EasyCash v2.0 | © 2024 All rights reserved</p>
+        </div>
+    </div>
+
+    <!-- PWA Install Prompt (Bottom Banner) - Also hidden when app is installed -->
+    <div class="pwa-install-prompt" id="pwaInstallPrompt">
+        <div class="pwa-prompt-content">
+            <div class="pwa-prompt-info">
+                <div class="pwa-prompt-title">
+                    <i class="fas fa-mobile-alt"></i>
+                    Install EasyCash App
+                </div>
+                <div class="pwa-prompt-desc">
+                    Get the full app experience! Install EasyCash to access your wallet faster, 
+                    work offline, and get push notifications.
+                </div>
+            </div>
+            <div class="pwa-prompt-actions">
+                <button class="btn-pwa-install" id="installPwaFromPrompt">
+                    <i class="fas fa-download"></i>
+                    Install Now
+                </button>
+                <button class="btn-pwa-later" id="dismissPwaPrompt">
+                    <i class="fas fa-clock"></i>
+                    Maybe Later
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWA Installation Instructions -->
+    <div class="pwa-instructions" id="pwaInstructions">
+        <div class="pwa-instructions-content">
+            <div class="pwa-instructions-header">
+                <h3><i class="fas fa-download"></i> How to Install EasyCash</h3>
+                <p>Follow these steps to install EasyCash as an app on your device</p>
+            </div>
+            
+            <div class="pwa-instruction-step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4><i class="fas fa-mobile-alt step-icon"></i> For Mobile Browsers</h4>
+                    <p>Look for the "Add to Home Screen" or "Install" option in your browser menu (usually three dots ⋮ or share button).</p>
+                </div>
+            </div>
+            
+            <div class="pwa-instruction-step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4><i class="fas fa-desktop step-icon"></i> For Desktop Browsers</h4>
+                    <p>Chrome/Edge: Click the install icon (⎙) in the address bar. Firefox/Safari: Use "Install Site as App" from the menu.</p>
+                </div>
+            </div>
+            
+            <div class="pwa-instruction-step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4><i class="fas fa-cog step-icon"></i> Device-Specific Instructions</h4>
+                    <p><strong>Android/Chrome:</strong> Tap ⋮ → "Add to Home screen" → "Add"<br>
+                    <strong>iOS/Safari:</strong> Tap ⎙ → "Add to Home Screen" → "Add"<br>
+                    <strong>Windows:</strong> Click ⎙ in Chrome/Edge address bar → "Install"</p>
+                </div>
+            </div>
+            
+            <div class="pwa-instruction-step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h4><i class="fas fa-check-circle step-icon"></i> Benefits of Installation</h4>
+                    <p>• Faster loading and better performance<br>
+                       • Works offline<br>
+                       • App-like experience (no browser UI)<br>
+                       • Push notifications support<br>
+                       • Quick access from home screen</p>
+                </div>
+            </div>
+            
+            <div class="pwa-instructions-footer">
+                <button class="btn-primary" onclick="closePwaInstructions()">
+                    <i class="fas fa-check"></i>
+                    Got It, Thanks!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terms of Service Modal -->
+    <div class="modal" id="termsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-file-contract"></i>
+                    Terms of Service
+                </h3>
+                <button class="close-modal" onclick="closeModal('termsModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <h4>1. Acceptance of Terms</h4>
+                <p>By accessing and using EasyCash, you accept and agree to be bound by the terms and provision of this agreement.</p>
+                
+                <h4>2. Description of Service</h4>
+                <p>EasyCash provides an ATM-style digital wallet service that allows users to perform financial transactions including but not limited to money transfers, bill payments, mobile recharges, and account management.</p>
+                
+                <h4>3. User Registration</h4>
+                <p>To use EasyCash services, you must register with a valid mobile number. You agree to provide accurate, current, and complete information during the registration process.</p>
+                
+                <h4>4. Account Security</h4>
+                <p>You are responsible for maintaining the confidentiality of your account information and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account.</p>
+                
+                <h4>5. Transaction Limits</h4>
+                <p>EasyCash may impose daily, weekly, or monthly transaction limits. These limits may vary based on your verification status and account history.</p>
+                
+                <h4>6. Fees and Charges</h4>
+                <p>Certain transactions may attract fees as displayed at the time of transaction. All fees are subject to change with prior notice.</p>
+                
+                <h4>7. Prohibited Activities</h4>
+                <p>You agree not to use EasyCash for any illegal activities including but not limited to money laundering, fraud, or terrorist financing.</p>
+                
+                <h4>8. Intellectual Property</h4>
+                <p>All content, trademarks, and data on this platform are the property of EasyCash and are protected by intellectual property laws.</p>
+                
+                <h4>9. Termination</h4>
+                <p>We reserve the right to terminate or suspend your account at our sole discretion, without notice, for conduct that we believe violates these Terms.</p>
+                
+                <h4>10. Limitation of Liability</h4>
+                <p>EasyCash shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the service.</p>
+                
+                <h4>11. Changes to Terms</h4>
+                <p>We reserve the right to modify these terms at any time. Continued use of EasyCash after changes constitutes acceptance of the new terms.</p>
+                
+                <h4>12. Governing Law</h4>
+                <p>These terms shall be governed by and construed in accordance with the laws of India, without regard to its conflict of law provisions.</p>
+                
+                <h4>13. Contact Information</h4>
+                <p>For questions about these Terms, contact us at: support@easycash.com</p>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="closeModal('termsModal')">
+                    <i class="fas fa-check"></i>
+                    I Understand
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Privacy Policy Modal -->
+    <div class="modal" id="privacyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-user-shield"></i>
+                    Privacy Policy
+                </h3>
+                <button class="close-modal" onclick="closeModal('privacyModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <h4>1. Information We Collect</h4>
+                <p>We collect information that you provide directly to us, including:</p>
+                <ul>
+                    <li>Mobile number and contact information</li>
+                    <li>Identity verification documents (Aadhaar, PAN, etc.)</li>
+                    <li>Transaction history and preferences</li>
+                    <li>Device information and IP address</li>
+                    <li>Location data (with your permission)</li>
+                </ul>
+                
+                <h4>2. How We Use Your Information</h4>
+                <p>We use the information we collect to:</p>
+                <ul>
+                    <li>Provide, maintain, and improve our services</li>
+                    <li>Process transactions and send notifications</li>
+                    <li>Verify your identity and prevent fraud</li>
+                    <li>Communicate with you about products and updates</li>
+                    <li>Comply with legal obligations</li>
+                </ul>
+                
+                <h4>3. Information Sharing</h4>
+                <p>We do not sell your personal information. We may share information:</p>
+                <ul>
+                    <li>With banking partners to process transactions</li>
+                    <li>With service providers who assist our operations</li>
+                    <li>When required by law or to protect rights</li>
+                    <li>During business transfers or mergers</li>
+                </ul>
+                
+                <h4>4. Data Security</h4>
+                <p>We implement industry-standard security measures including:</p>
+                <ul>
+                    <li>256-bit SSL encryption for data transmission</li>
+                    <li>Secure servers with restricted access</li>
+                    <li>Regular security audits and testing</li>
+                    <li>Two-factor authentication for accounts</li>
+                </ul>
+                
+                <h4>5. Data Retention</h4>
+                <p>We retain your personal information only as long as necessary to:</p>
+                <ul>
+                    <li>Provide services you have requested</li>
+                    <li>Comply with legal obligations</li>
+                    <li>Resolve disputes and enforce agreements</li>
+                    <li>Maintain business records as required by law</li>
+                </ul>
+                
+                <h4>6. Your Rights</h4>
+                <p>You have the right to:</p>
+                <ul>
+                    <li>Access your personal information</li>
+                    <li>Correct inaccurate data</li>
+                    <li>Request deletion of your data</li>
+                    <li>Opt-out of marketing communications</li>
+                    <li>Data portability</li>
+                </ul>
+                
+                <h4>7. Cookies and Tracking</h4>
+                <p>We use cookies and similar technologies to:</p>
+                <ul>
+                    <li>Remember your preferences</li>
+                    <li>Analyze site traffic and usage</li>
+                    <li>Improve user experience</li>
+                    <li>Prevent fraudulent activities</li>
+                </ul>
+                
+                <h4>8. Children's Privacy</h4>
+                <p>EasyCash does not knowingly collect information from children under 18. If we learn we have collected such information, we will delete it promptly.</p>
+                
+                <h4>9. Changes to Privacy Policy</h4>
+                <p>We may update this policy periodically. We will notify you of significant changes through the app or via email.</p>
+                
+                <h4>10. Contact Us</h4>
+                <p>For privacy concerns or questions, contact our Data Protection Officer at: privacy@easycash.com</p>
+                
+                <p><strong>Last Updated:</strong> January 1, 2024</p>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="closeModal('privacyModal')">
+                    <i class="fas fa-check"></i>
+                    I Understand
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="help-modal" id="helpModal">
+        <div class="help-content">
+            <div class="help-header">
+                <h3>
+                    <i class="fas fa-question-circle"></i>
+                    Need Help?
+                </h3>
+                <button class="close-help" onclick="closeHelp()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="help-body">
+                <h4>Phone Verification</h4>
+                <p><strong>Why do I need to verify my phone number?</strong></p>
+                <p>Phone verification ensures your account security and allows us to send important notifications and OTPs for transactions.</p>
+                
+                <p><strong>What if I don't receive the OTP?</strong></p>
+                <p>Try these steps:</p>
+                <ul>
+                    <li>Check if your mobile number is entered correctly</li>
+                    <li>Wait for 2 minutes before requesting a new OTP</li>
+                    <li>Ensure you have network coverage</li>
+                    <li>Check your spam folder for SMS</li>
+                </ul>
+                
+                <p><strong>Supported mobile numbers:</strong></p>
+                <ul>
+                    <li>All Indian mobile numbers starting with 6, 7, 8, or 9</li>
+                    <li>10-digit numbers only</li>
+                    <li>Both prepaid and postpaid connections</li>
+                </ul>
+                
+                <h4>Account Setup</h4>
+                <p><strong>What documents do I need?</strong></p>
+                <p>For full account verification, you'll need:</p>
+                <ul>
+                    <li>Aadhaar Card (for KYC)</li>
+                    <li>PAN Card (for transactions above ₹50,000)</li>
+                    <li>Recent photograph</li>
+                </ul>
+                
+                <p><strong>How long does verification take?</strong></p>
+                <p>Phone verification is instant. Full KYC verification typically takes 2-4 hours during business days.</p>
+                
+                <h4>Technical Support</h4>
+                <p>For technical issues:</p>
+                <ul>
+                    <li>Clear browser cache and cookies</li>
+                    <li>Try using a different browser</li>
+                    <li>Ensure you have the latest browser version</li>
+                    <li>Check your internet connection</li>
+                </ul>
+                
+                <h4>Contact Support</h4>
+                <p>Still need help? Contact our support team:</p>
+                <a href="tel:18001234567" class="help-support-link">
+                    <i class="fas fa-phone"></i>
+                    Call: 1800-123-4567
+                </a>
+                <br>
+                <a href="mailto:support@easycash.com" class="help-support-link">
+                    <i class="fas fa-envelope"></i>
+                    Email: support@easycash.com
+                </a>
+                <br>
+                <a href="https://wa.me/919876543210" class="help-support-link" target="_blank">
+                    <i class="fab fa-whatsapp"></i>
+                    WhatsApp: +91 98765 43210
+                </a>
+                
+                <p><strong>Support Hours:</strong> 24/7 for urgent issues. General support: 9 AM - 9 PM (IST)</p>
+            </div>
+            
+            <button class="btn-primary" onclick="closeHelp()">
+                <i class="fas fa-check"></i>
+                Got It
+            </button>
+        </div>
+    </div>
+
+    <script>
+    // ============================================
+    // PWA Installation Functionality
+    // ============================================
+    
+    let deferredPrompt;
+    let isInstalled = false;
+    let promptShown = false;
+    
+    // DOM Elements
+    const pwaInstallButton = document.getElementById('pwaInstallButton');
+    const pwaInstallContainer = document.querySelector('.pwa-install-container');
+    const pwaInstallPrompt = document.getElementById('pwaInstallPrompt');
+    const pwaInstructions = document.getElementById('pwaInstructions');
+    const installPwaFromPrompt = document.getElementById('installPwaFromPrompt');
+    const dismissPwaPrompt = document.getElementById('dismissPwaPrompt');
+    
+    // HIDE THE INSTALL BUTTON COMPLETELY
+    function hidePwaButton() {
+        if (pwaInstallContainer) {
+            pwaInstallContainer.style.display = 'none';
+        }
+        if (pwaInstallButton) {
+            pwaInstallButton.style.display = 'none';
+        }
+    }
+    
+    // Check if PWA is already installed
+    function checkIfPwaInstalled() {
+        // Check if running in standalone mode
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            isInstalled = true;
+            hidePwaButton(); // HIDE the button
+            hidePwaPrompt(); // Also hide the bottom prompt
+            return true;
+        }
+        
+        // Check for navigator.standalone (iOS)
+        if (window.navigator.standalone === true) {
+            isInstalled = true;
+            hidePwaButton(); // HIDE the button
+            hidePwaPrompt(); // Also hide the bottom prompt
+            return true;
+        }
+        
+        // Check localStorage
+        if (localStorage.getItem('easycash_pwa_installed') === 'true') {
+            isInstalled = true;
+            hidePwaButton(); // HIDE the button
+            hidePwaPrompt(); // Also hide the bottom prompt
+            return true;
+        }
+        
+        return false;
+    }
+    
+    // Show PWA install prompt
+    function showPwaPrompt() {
+        if (isInstalled || promptShown) return;
+        
+        // Wait 3 seconds before showing prompt
+        setTimeout(() => {
+            if (!isInstalled) { // Double-check before showing
+                pwaInstallPrompt.classList.add('active');
+                promptShown = true;
+                localStorage.setItem('easycash_pwa_prompt_shown', 'true');
+            }
+        }, 3000);
+    }
+    
+    // Hide PWA install prompt
+    function hidePwaPrompt() {
+        if (pwaInstallPrompt) {
+            pwaInstallPrompt.classList.remove('active');
+        }
+    }
+    
+    // Show installation instructions
+    function showPwaInstructions() {
+        closeAllModals();
+        if (pwaInstructions) {
+            pwaInstructions.classList.add('active');
+            document.body.classList.add('modal-open');
+        }
+    }
+    
+    // Close installation instructions
+    function closePwaInstructions() {
+        if (pwaInstructions) {
+            pwaInstructions.classList.remove('active');
+            document.body.classList.remove('modal-open');
+        }
+    }
+    
+    // Trigger PWA installation
+    async function installPwa() {
+        if (deferredPrompt) {
+            // Show the install prompt
+            deferredPrompt.prompt();
+            
+            // Wait for the user to respond to the prompt
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            // Check if installation was successful
+            if (outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+                isInstalled = true;
+                localStorage.setItem('easycash_pwa_installed', 'true');
+                
+                // HIDE THE BUTTON AND PROMPT
+                hidePwaButton();
+                hidePwaPrompt();
+                
+                // Show success message
+                showToast('EasyCash installed successfully! Check your home screen.', 'success');
+            } else {
+                console.log('User dismissed the install prompt');
+                // Show instructions for manual installation
+                showPwaInstructions();
+            }
+            
+            // Clear the deferredPrompt variable
+            deferredPrompt = null;
+        } else {
+            // If deferredPrompt is not available, show instructions
+            showPwaInstructions();
+        }
+    }
+    
+    // Show toast notification
+    function showToast(message, type = 'info') {
+        // Remove existing toast
+        const existingToast = document.querySelector('.toast-notification');
+        if (existingToast) existingToast.remove();
+        
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast-notification toast-${type}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            </div>
+            <button class="toast-close">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        // Add styles
+        const toastStyles = `
+            <style>
+                .toast-notification {
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: #1e1e1e;
+                    color: white;
+                    padding: 16px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 15px;
+                    z-index: 9999;
+                    animation: slideUp 0.3s ease;
+                    max-width: 350px;
+                    border-left: 4px solid;
+                }
+                .toast-success {
+                    border-left-color: #34a853;
+                }
+                .toast-info {
+                    border-left-color: #1a73e8;
+                }
+                .toast-error {
+                    border-left-color: #ea4335;
+                }
+                .toast-content {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                .toast-content i {
+                    font-size: 18px;
+                }
+                .toast-content span {
+                    font-size: 14px;
+                }
+                .toast-close {
+                    background: transparent;
+                    border: none;
+                    color: #b0b0b0;
+                    cursor: pointer;
+                    padding: 4px;
+                    border-radius: 4px;
+                    transition: all 0.3s ease;
+                }
+                .toast-close:hover {
+                    background: rgba(255,255,255,0.1);
+                    color: white;
+                }
+                @keyframes slideUp {
+                    from { transform: translateY(100px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+            </style>
+        `;
+        
+        // Add styles if not already added
+        if (!document.querySelector('#toast-styles')) {
+            const styleEl = document.createElement('style');
+            styleEl.id = 'toast-styles';
+            styleEl.textContent = toastStyles;
+            document.head.appendChild(styleEl);
+        }
+        
+        document.body.appendChild(toast);
+        
+        // Add close functionality
+        const closeBtn = toast.querySelector('.toast-close');
+        closeBtn.addEventListener('click', () => toast.remove());
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 5000);
+    }
+    
+    // ============================================
+    // Event Listeners for PWA
+    // ============================================
+    
+    // Listen for beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent the default mini-infobar from appearing on mobile
+        e.preventDefault();
+        
+        // Stash the event so it can be triggered later
+        deferredPrompt = e;
+        
+        // Show install button ONLY if not already installed
+        if (!isInstalled) {
+            pwaInstallButton.style.display = 'flex';
+            
+            // Show prompt after delay (only if not shown before today)
+            const lastPromptDate = localStorage.getItem('easycash_pwa_prompt_date');
+            const today = new Date().toDateString();
+            
+            if (!lastPromptDate || lastPromptDate !== today) {
+                showPwaPrompt();
+                localStorage.setItem('easycash_pwa_prompt_date', today);
+            }
+        }
+    });
+    
+    // Listen for appinstalled event
+    window.addEventListener('appinstalled', () => {
+        console.log('PWA was installed');
+        isInstalled = true;
+        localStorage.setItem('easycash_pwa_installed', 'true');
+        
+        // HIDE THE BUTTON AND PROMPT
+        hidePwaButton();
+        hidePwaPrompt();
+        
+        // Show success message
+        showToast('EasyCash installed successfully!', 'success');
+    });
+    
+    // ============================================
+    // Event Listeners for UI Elements
+    // ============================================
+    
+    // Install button click
+    if (pwaInstallButton) {
+        pwaInstallButton.addEventListener('click', installPwa);
+    }
+    
+    // Install from prompt button
+    if (installPwaFromPrompt) {
+        installPwaFromPrompt.addEventListener('click', installPwa);
+    }
+    
+    // Dismiss prompt button
+    if (dismissPwaPrompt) {
+        dismissPwaPrompt.addEventListener('click', () => {
+            hidePwaPrompt();
+            // Show instructions for manual installation
+            showPwaInstructions();
+        });
+    }
+    
+    // ============================================
+    // Existing JavaScript Functions (from original)
+    // ============================================
+    
+    // Help modal functions
+    function showHelp() {
+        document.getElementById('helpModal').classList.add('active');
+        document.body.classList.add('modal-open');
+    }
+
+    function closeHelp() {
+        document.getElementById('helpModal').classList.remove('active');
+        document.body.classList.remove('modal-open');
+    }
+
+    // Terms and Privacy modal functions
+    function showTermsModal() {
+        closeAllModals();
+        document.getElementById('termsModal').classList.add('active');
+        document.body.classList.add('modal-open');
+    }
+
+    function showPrivacyModal() {
+        closeAllModals();
+        document.getElementById('privacyModal').classList.add('active');
+        document.body.classList.add('modal-open');
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+        document.body.classList.remove('modal-open');
+    }
+
+    function closeAllModals() {
+        const modals = document.querySelectorAll('.modal.active, .help-modal.active');
+        modals.forEach(modal => {
+            modal.classList.remove('active');
+        });
+        document.body.classList.remove('modal-open');
+    }
+
+    // Phone input validation and formatting
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize PWA check - THIS WILL HIDE BUTTON IF ALREADY INSTALLED
+        checkIfPwaInstalled();
+        
+        const phoneInput = document.getElementById('phone');
+        const form = document.getElementById('phoneForm');
+        const wrapper = document.querySelector('.phone-input-wrapper');
+        const errorMessage = document.querySelector('.error-message');
+        const errorText = document.getElementById('errorText');
+        
+        // Auto-format as user types
+        phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            
+            if (value.length > 10) {
+                value = value.substring(0, 10);
+            }
+            
+            if (value.length > 0 && !['6','7','8','9'].includes(value[0])) {
+                wrapper.style.borderColor = '#ea4335';
+                e.target.setCustomValidity('Mobile number must start with 6, 7, 8, or 9');
+                showError('Mobile number must start with 6, 7, 8, or 9');
+            } else {
+                wrapper.style.borderColor = '';
+                e.target.setCustomValidity('');
+                hideError();
+            }
+            
+            e.target.value = value;
+        });
+        
+        phoneInput.addEventListener('keydown', function(e) {
+            if (!/^\d$/.test(e.key) && 
+                e.key !== 'Backspace' && 
+                e.key !== 'Tab' && 
+                e.key !== 'Delete' && 
+                e.key !== 'ArrowLeft' && 
+                e.key !== 'ArrowRight' &&
+                !e.ctrlKey && 
+                !e.metaKey) {
+                e.preventDefault();
+            }
+        });
+        
+        // Focus on phone input on load
+        setTimeout(() => {
+            phoneInput.focus();
+        }, 300);
+        
+        // Close modals on ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeAllModals();
+                closePwaInstructions();
+            }
+        });
+        
+        // Close modals when clicking outside
+        const modals = document.querySelectorAll('.modal, .help-modal, .pwa-instructions');
+        modals.forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    if (this.id === 'helpModal') {
+                        closeHelp();
+                    } else if (this.id === 'pwaInstructions') {
+                        closePwaInstructions();
+                    } else {
+                        closeModal(this.id);
+                    }
+                }
+            });
+        });
+        
+        // Form submission with loading state
+        form.addEventListener('submit', function(e) {
+            const phone = document.getElementById('phone').value;
+            const terms = document.getElementById('terms').checked;
+            
+            if (!phone) {
+                e.preventDefault();
+                showError('Please enter your phone number');
+                phoneInput.focus();
+                return;
+            }
+            
+            if (!terms) {
+                e.preventDefault();
+                showError('Please agree to the Terms and Privacy Policy');
+                return;
+            }
+            
+            if (phone.length !== 10) {
+                e.preventDefault();
+                showError('Phone number must be exactly 10 digits');
+                phoneInput.focus();
+                return;
+            }
+            
+            if (!['6','7','8','9'].includes(phone[0])) {
+                e.preventDefault();
+                showError('Mobile number must start with 6, 7, 8, or 9');
+                phoneInput.focus();
+                return;
+            }
+            
+            localStorage.setItem('easycash_last_phone', phone);
+            
+            const submitBtn = this.querySelector('.btn-primary');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+            hideError();
+        });
+        
+        // Add visual feedback on focus
+        phoneInput.addEventListener('focus', function() {
+            wrapper.style.borderColor = '#1a73e8';
+            wrapper.style.background = '#1e1e1e';
+            document.querySelector('.country-code').style.background = '#1e1e1e';
+            document.querySelector('.country-code').style.borderRightColor = '#1a73e8';
+        });
+        
+        phoneInput.addEventListener('blur', function() {
+            wrapper.style.borderColor = '';
+            wrapper.style.background = '';
+            document.querySelector('.country-code').style.background = '';
+            document.querySelector('.country-code').style.borderRightColor = '';
+        });
+        
+        // Helper functions for error display
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.style.display = 'flex';
+        }
+        
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+    });
+    
+    // Try auto-login function
+    function tryAutoLogin() {
+        const lastPhone = localStorage.getItem('easycash_last_phone');
+        
+        if (lastPhone) {
+            window.location.href = '/pin-entry';
+        } else {
+            const phoneInput = document.getElementById('phone');
+            if (phoneInput) {
+                phoneInput.focus();
+            }
+        }
+    }
+    
+    // Continue with new account (from auto-login prompt)
+    function continueWithNewAccount() {
+        const phoneInput = document.getElementById('phone');
+        if (phoneInput) {
+            phoneInput.value = '';
+            phoneInput.focus();
+        }
+        
+        const prompt = document.querySelector('.auto-login-prompt');
+        if (prompt) {
+            prompt.style.display = 'none';
+        }
+    }
+    
+    // Check if online/offline
+    window.addEventListener('online', function() {
+        console.log('App is online');
+        document.body.classList.remove('offline');
+        document.body.classList.add('online');
+    });
+    
+    window.addEventListener('offline', function() {
+        console.log('App is offline');
+        document.body.classList.remove('online');
+        document.body.classList.add('offline');
+    });
+    
+    // Initial check
+    if (!navigator.onLine) {
+        document.body.classList.add('offline');
+    }
+    </script>
+</body>
+</html>

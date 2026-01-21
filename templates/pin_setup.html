@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyCash - Setup PIN</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #121212;
+            color: #ffffff;
+            min-height: 100vh;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .auth-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            background: #121212;
+        }
+
+        .app-header {
+            text-align: center;
+            margin-bottom: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .app-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .app-logo i {
+            font-size: 42px;
+            color: #1a73e8;
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .app-logo h1 {
+            font-size: 32px;
+            color: white;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .auth-subtitle, .auth-subtext {
+            color: #b0b0b0;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .auth-subtext {
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .auth-card {
+            background: #1e1e1e;
+            border-radius: 16px;
+            padding: 40px 30px;
+            margin-bottom: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .auth-card h2 {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .error-message {
+            background: rgba(234, 67, 53, 0.1);
+            color: #ea4335;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(234, 67, 53, 0.3);
+            text-align: center;
+            justify-content: center;
+        }
+
+        /* Pin Setup Specific Styles */
+        .pin-input-container {
+            margin-bottom: 40px;
+        }
+
+        .pin-input-container label {
+            display: block;
+            color: #b0b0b0;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+
+        .pin-display {
+            border: 2px solid #2d2d2d;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 70px;
+            transition: all 0.3s ease;
+            position: relative;
+            background: #1e1e1e;
+            margin-bottom: 25px;
+        }
+
+        .pin-display.active {
+            border: 2px solid #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+
+        .pin-display.error {
+            border-color: #ea4335 !important;
+            animation: shake 0.5s ease-in-out;
+            background: rgba(234, 67, 53, 0.1);
+        }
+
+        .pin-display.error .pin-dot.filled {
+            background: #ea4335;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+
+        /* PIN dot styling */
+        .pin-dot {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            margin: 0 10px;
+            border-radius: 50%;
+            background: #2d2d2d;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            text-align: center;
+            line-height: 24px;
+            color: white;
+        }
+
+        .pin-dot.filled {
+            background: #1a73e8;
+            transform: scale(1.1);
+            color: white;
+        }
+
+        .btn-text {
+            background: transparent;
+            border: none;
+            color: #1a73e8;
+            padding: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.3s ease;
+        }
+
+        .btn-text:hover {
+            color: #4285f4;
+        }
+
+        /* Keypad styling - FIXED LAYOUT */
+        .keypad-container {
+            margin: 30px 0;
+            padding: 20px;
+            background: #1e1e1e;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .keypad-row {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .keypad-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .keypad-btn {
+            width: 70px;
+            height: 70px;
+            margin: 0 8px;
+            border-radius: 50%;
+            border: 2px solid #2d2d2d;
+            background: #2d2d2d;
+            color: white;
+            font-size: 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            flex: 0 0 auto;
+        }
+
+        .keypad-btn:hover {
+            background: #3a3a3a;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .keypad-btn:active {
+            transform: translateY(1px);
+            background: #1a73e8;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Form actions */
+        .form-actions {
+            display: flex;
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .btn-primary, .btn-secondary {
+            flex: 1;
+            padding: 16px 24px;
+            border-radius: 12px;
+            text-align: center;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+            font-size: 16px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .btn-secondary {
+            background: #2d2d2d;
+            color: white;
+            border: 2px solid #3a3a3a;
+        }
+
+        .btn-secondary:hover {
+            background: #3a3a3a;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .keypad-btn {
+                width: 60px;
+                height: 60px;
+                margin: 0 6px;
+                font-size: 20px;
+            }
+            
+            .pin-dot {
+                width: 20px;
+                height: 20px;
+                margin: 0 8px;
+                line-height: 20px;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .pin-display {
+                height: 60px;
+                padding: 16px;
+            }
+            
+            .auth-container {
+                padding: 16px;
+            }
+            
+            .auth-card {
+                padding: 30px 20px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .keypad-btn {
+                width: 55px;
+                height: 55px;
+                font-size: 18px;
+            }
+            
+            .pin-dot {
+                width: 18px;
+                height: 18px;
+                margin: 0 6px;
+                line-height: 18px;
+            }
+            
+            .auth-card {
+                padding: 24px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="app-header">
+            <div class="app-logo">
+                <i class="fas fa-wallet"></i>
+                <h1>EasyCash</h1>
+            </div>
+            <p class="auth-subtitle">Setting up PIN</p>
+        </div>
+        
+        <div class="auth-card">
+            <h2>Setup PIN</h2>
+            <p class="auth-subtext">Create a 6-digit PIN for security</p>
+            
+            <div class="error-message" id="pinError" style="display: none;">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="pinErrorText"></span>
+            </div>
+            
+            <form method="POST" class="auth-form" id="pinForm">
+                <div class="pin-input-container">
+                    <label for="pin">Enter 6-digit PIN</label>
+                    <div class="pin-display" id="pinDisplay">
+                        <span class="pin-dot" data-index="0"></span>
+                        <span class="pin-dot" data-index="1"></span>
+                        <span class="pin-dot" data-index="2"></span>
+                        <span class="pin-dot" data-index="3"></span>
+                        <span class="pin-dot" data-index="4"></span>
+                        <span class="pin-dot" data-index="5"></span>
+                        <input type="password" 
+                               id="pin" 
+                               name="pin" 
+                               maxlength="6" 
+                               pattern="\d{6}"
+                               required
+                               autocomplete="new-password"
+                               data-field="first"
+                               style="opacity: 0; position: absolute; left: -9999px;">
+                    </div>
+                    
+                    <label for="confirm_pin" style="margin-top: 25px;">Confirm PIN</label>
+                    <div class="pin-display" id="confirmPinDisplay">
+                        <span class="pin-dot" data-index="0"></span>
+                        <span class="pin-dot" data-index="1"></span>
+                        <span class="pin-dot" data-index="2"></span>
+                        <span class="pin-dot" data-index="3"></span>
+                        <span class="pin-dot" data-index="4"></span>
+                        <span class="pin-dot" data-index="5"></span>
+                        <input type="password" 
+                               id="confirm_pin" 
+                               name="confirm_pin" 
+                               maxlength="6" 
+                               pattern="\d{6}"
+                               required
+                               autocomplete="new-password"
+                               data-field="second"
+                               style="opacity: 0; position: absolute; left: -9999px;">
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button type="button" id="togglePin" class="btn-text">
+                            <i class="fas fa-eye"></i> <span>Show PIN</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Fixed Keypad Layout -->
+                <div class="keypad-container">
+                    <div class="keypad-row">
+                        <button type="button" class="keypad-btn" data-number="1">1</button>
+                        <button type="button" class="keypad-btn" data-number="2">2</button>
+                        <button type="button" class="keypad-btn" data-number="3">3</button>
+                    </div>
+                    <div class="keypad-row">
+                        <button type="button" class="keypad-btn" data-number="4">4</button>
+                        <button type="button" class="keypad-btn" data-number="5">5</button>
+                        <button type="button" class="keypad-btn" data-number="6">6</button>
+                    </div>
+                    <div class="keypad-row">
+                        <button type="button" class="keypad-btn" data-number="7">7</button>
+                        <button type="button" class="keypad-btn" data-number="8">8</button>
+                        <button type="button" class="keypad-btn" data-number="9">9</button>
+                    </div>
+                    <div class="keypad-row">
+                        <button type="button" class="keypad-btn btn-text" id="clearBtn" style="font-size: 20px;">
+                            <i class="fas fa-backspace"></i>
+                        </button>
+                        <button type="button" class="keypad-btn" data-number="0">0</button>
+                        <button type="button" class="keypad-btn btn-text" id="backBtn" style="font-size: 20px;">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary" id="submitBtn">
+                        Create PIN
+                        <i class="fas fa-lock"></i>
+                    </button>
+                    <a href="/" class="btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const pinInput = document.getElementById('pin');
+        const confirmPinInput = document.getElementById('confirm_pin');
+        const pinDots = document.querySelectorAll('#pinDisplay .pin-dot');
+        const confirmDots = document.querySelectorAll('#confirmPinDisplay .pin-dot');
+        const keypadButtons = document.querySelectorAll('.keypad-btn[data-number]');
+        const toggleBtn = document.getElementById('togglePin');
+        const clearBtn = document.getElementById('clearBtn');
+        const backBtn = document.getElementById('backBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const form = document.getElementById('pinForm');
+        const pinError = document.getElementById('pinError');
+        const pinErrorText = document.getElementById('pinErrorText');
+        
+        let currentInput = pinInput;
+        let showPin = false;
+        
+        // Function to update pin dots
+        function updatePinDots(input, dots) {
+            const value = input.value;
+            dots.forEach((dot, index) => {
+                if (index < value.length) {
+                    dot.textContent = showPin ? value[index] : '•';
+                    dot.classList.add('filled');
+                } else {
+                    dot.textContent = '';
+                    dot.classList.remove('filled');
+                }
+            });
+        }
+        
+        // Function to highlight active field
+        function setActiveField(input) {
+            currentInput = input;
+            
+            // Remove active class from both displays
+            document.querySelectorAll('.pin-display').forEach(display => {
+                display.classList.remove('active');
+            });
+            
+            // Add active class to current display
+            if (input === pinInput) {
+                document.getElementById('pinDisplay').classList.add('active');
+            } else {
+                document.getElementById('confirmPinDisplay').classList.add('active');
+            }
+        }
+        
+        // Function to show error
+        function showPinError(message) {
+            pinErrorText.textContent = message;
+            pinError.style.display = 'block';
+        }
+        
+        // Function to clear error
+        function clearPinError() {
+            pinError.style.display = 'none';
+            document.querySelectorAll('.pin-display').forEach(display => {
+                display.classList.remove('error');
+            });
+        }
+        
+        // Handle keypad input
+        keypadButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                clearPinError();
+                
+                if (currentInput.value.length < 6) {
+                    currentInput.value += button.dataset.number;
+                    updatePinDots(currentInput, 
+                        currentInput === pinInput ? pinDots : confirmDots);
+                    
+                    // Auto-focus to next field when current is full
+                    if (currentInput.value.length === 6) {
+                        if (currentInput === pinInput && confirmPinInput.value.length < 6) {
+                            confirmPinInput.focus();
+                            setActiveField(confirmPinInput);
+                        } else if (currentInput === confirmPinInput && pinInput.value.length < 6) {
+                            pinInput.focus();
+                            setActiveField(pinInput);
+                        }
+                    }
+                }
+            });
+        });
+        
+        // Clear button - clear current input
+        clearBtn.addEventListener('click', () => {
+            clearPinError();
+            currentInput.value = '';
+            updatePinDots(currentInput, 
+                currentInput === pinInput ? pinDots : confirmDots);
+        });
+        
+        // Back button - remove last character
+        backBtn.addEventListener('click', () => {
+            clearPinError();
+            
+            if (currentInput.value.length > 0) {
+                currentInput.value = currentInput.value.slice(0, -1);
+                updatePinDots(currentInput, 
+                    currentInput === pinInput ? pinDots : confirmDots);
+            } else {
+                // If current input is empty and we're on confirm field, go back to first field
+                if (currentInput === confirmPinInput) {
+                    pinInput.focus();
+                    setActiveField(pinInput);
+                }
+            }
+        });
+        
+        // Toggle PIN visibility
+        toggleBtn.addEventListener('click', () => {
+            showPin = !showPin;
+            const icon = toggleBtn.querySelector('i');
+            const text = toggleBtn.querySelector('span');
+            
+            if (showPin) {
+                icon.className = 'fas fa-eye-slash';
+                text.textContent = ' Hide PIN';
+            } else {
+                icon.className = 'fas fa-eye';
+                text.textContent = ' Show PIN';
+            }
+            
+            updatePinDots(pinInput, pinDots);
+            updatePinDots(confirmPinInput, confirmDots);
+        });
+        
+        // Switch between PIN fields on focus
+        pinInput.addEventListener('focus', () => {
+            setActiveField(pinInput);
+        });
+        
+        confirmPinInput.addEventListener('focus', () => {
+            setActiveField(confirmPinInput);
+        });
+        
+        // Handle input events for both fields
+        pinInput.addEventListener('input', function() {
+            clearPinError();
+            updatePinDots(pinInput, pinDots);
+            
+            // Auto-focus to confirm field when first PIN is complete
+            if (this.value.length === 6 && confirmPinInput.value.length < 6) {
+                setTimeout(() => {
+                    confirmPinInput.focus();
+                    setActiveField(confirmPinInput);
+                }, 100);
+            }
+        });
+        
+        confirmPinInput.addEventListener('input', function() {
+            clearPinError();
+            updatePinDots(confirmPinInput, confirmDots);
+            
+            // Auto-focus back to first field if second field is empty and backspace pressed
+            if (this.value.length === 0) {
+                setTimeout(() => {
+                    pinInput.focus();
+                    setActiveField(pinInput);
+                }, 100);
+            }
+        });
+        
+        // Form validation function
+        function validatePinForm(event) {
+            if (event) {
+                event.preventDefault();
+            }
+            
+            const pin = pinInput.value;
+            const confirmPin = confirmPinInput.value;
+            
+            clearPinError();
+            
+            // Check if PINs are filled
+            if (!pin || pin.length === 0) {
+                showPinError('Please enter a 6-digit PIN');
+                document.getElementById('pinDisplay').classList.add('error');
+                pinInput.focus();
+                setActiveField(pinInput);
+                return false;
+            }
+            
+            if (!confirmPin || confirmPin.length === 0) {
+                showPinError('Please confirm your PIN');
+                document.getElementById('confirmPinDisplay').classList.add('error');
+                confirmPinInput.focus();
+                setActiveField(confirmPinInput);
+                return false;
+            }
+            
+            // Check PIN length
+            if (pin.length !== 6) {
+                showPinError('PIN must be exactly 6 digits');
+                document.getElementById('pinDisplay').classList.add('error');
+                pinInput.focus();
+                setActiveField(pinInput);
+                return false;
+            }
+            
+            if (confirmPin.length !== 6) {
+                showPinError('Confirmation PIN must be exactly 6 digits');
+                document.getElementById('confirmPinDisplay').classList.add('error');
+                confirmPinInput.focus();
+                setActiveField(confirmPinInput);
+                return false;
+            }
+            
+            // Check if PINs match
+            if (pin !== confirmPin) {
+                showPinError('PINs do not match');
+                document.getElementById('pinDisplay').classList.add('error');
+                document.getElementById('confirmPinDisplay').classList.add('error');
+                
+                // Clear both fields and focus on first
+                pinInput.value = '';
+                confirmPinInput.value = '';
+                updatePinDots(pinInput, pinDots);
+                updatePinDots(confirmPinInput, confirmDots);
+                pinInput.focus();
+                setActiveField(pinInput);
+                
+                return false;
+            }
+            
+            // Check if PIN is too simple (all same digits, sequential, etc.)
+            if (/^(\d)\1{5}$/.test(pin)) {
+                showPinError('PIN is too simple. Use different digits.');
+                document.getElementById('pinDisplay').classList.add('error');
+                pinInput.value = '';
+                confirmPinInput.value = '';
+                updatePinDots(pinInput, pinDots);
+                updatePinDots(confirmPinInput, confirmDots);
+                pinInput.focus();
+                setActiveField(pinInput);
+                return false;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating PIN...';
+            
+            // Form will submit normally to Flask backend
+            // Flask will handle PIN creation and redirection
+            
+            // Submit the form
+            form.submit();
+            return true;
+        };
+        
+        // Form submission handler
+        form.addEventListener('submit', validatePinForm);
+        
+        // Initialize dots and set active field
+        updatePinDots(pinInput, pinDots);
+        updatePinDots(confirmPinInput, confirmDots);
+        setActiveField(pinInput);
+        pinInput.focus();
+        
+        // Add keyboard support for numbers
+        document.addEventListener('keydown', function(e) {
+            if (/^\d$/.test(e.key) && currentInput && currentInput.value.length < 6) {
+                clearPinError();
+                currentInput.value += e.key;
+                updatePinDots(currentInput, 
+                    currentInput === pinInput ? pinDots : confirmDots);
+                
+                // Auto-focus to next field when current is full
+                if (currentInput.value.length === 6) {
+                    if (currentInput === pinInput && confirmPinInput.value.length < 6) {
+                        confirmPinInput.focus();
+                        setActiveField(confirmPinInput);
+                    } else if (currentInput === confirmPinInput && pinInput.value.length < 6) {
+                        pinInput.focus();
+                        setActiveField(pinInput);
+                    }
+                }
+                
+                e.preventDefault();
+            }
+            
+            // Handle backspace
+            if (e.key === 'Backspace' && currentInput) {
+                clearPinError();
+                if (currentInput.value.length > 0) {
+                    currentInput.value = currentInput.value.slice(0, -1);
+                    updatePinDots(currentInput, 
+                        currentInput === pinInput ? pinDots : confirmDots);
+                } else if (currentInput === confirmPinInput) {
+                    // Move to first field if confirm field is empty
+                    pinInput.focus();
+                    setActiveField(pinInput);
+                }
+                e.preventDefault();
+            }
+            
+            // Handle tab navigation
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                clearPinError();
+                if (currentInput === pinInput) {
+                    confirmPinInput.focus();
+                    setActiveField(confirmPinInput);
+                } else {
+                    pinInput.focus();
+                    setActiveField(pinInput);
+                }
+            }
+            
+            // Handle Enter key - submit only when both fields are filled
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                validatePinForm(e);
+            }
+        });
+        
+        // Prevent form submission on Enter key in inputs
+        form.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                validatePinForm(e);
+            }
+        });
+    });
+    </script>
+</body>
+</html>

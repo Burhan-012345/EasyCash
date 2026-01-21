@@ -1,0 +1,2386 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <a href="{{ url_for('dashboard') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2>Profile</h2>
+        <div class="header-actions">
+            <button class="btn-icon" id="editProfileBtn" title="Edit">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn-icon" id="scanQrBtn" title="Scan QR Code">
+                <i class="fas fa-qrcode"></i>
+            </button>
+        </div>
+    </div>
+    
+    <div class="profile-card">
+        <div class="profile-avatar">
+            <div class="avatar">
+                {{ user.phone[-1]|upper if user and user.phone else 'U' }}
+            </div>
+            <div class="avatar-info">
+                <h3>{{ user.name if user and user.name else user.phone if user else 'User' }}</h3>
+                <p class="member-since">
+                    Member since {{ user.created_at[:10] if user else 'Unknown' }}
+                </p>
+                <div class="phone-info">
+                    <i class="fas fa-phone"></i>
+                    <span class="phone-number">{{ user.phone if user and user.phone else 'Not available' }}</span>
+                    <button class="btn-copy-phone" title="Copy phone number">
+                        <i class="far fa-copy"></i>
+                    </button>
+                </div>
+                {% if user.upi_id %}
+                <div class="upi-info">
+                    <i class="fas fa-qrcode"></i>
+                    <span class="upi-id">{{ user.upi_id }}</span>
+                    <button class="btn-copy-upi" title="Copy UPI ID">
+                        <i class="far fa-copy"></i>
+                    </button>
+                </div>
+                {% else %}
+                <div class="no-upi">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>UPI ID not set</span>
+                    <a href="{{ url_for('setup_upi') }}" class="setup-upi-link">Setup Now</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- QR Code Section -->
+        <div class="qr-code-section">
+            <h3><i class="fas fa-qrcode"></i> Your QR Code</h3>
+            <div class="qr-container">
+                <div class="qr-code-placeholder" id="qrCodePlaceholder">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading QR code...</p>
+                </div>
+                <div class="qr-details">
+                    <div class="qr-phone">
+                        <i class="fas fa-phone"></i>
+                        <span id="qrPhone">{{ user.phone if user and user.phone else 'Phone not set' }}</span>
+                    </div>
+                    <div class="qr-upi-id">
+                        <i class="fas fa-id-card"></i>
+                        <span id="qrUpiId">{{ user.upi_id if user and user.upi_id else 'Setup UPI ID first' }}</span>
+                    </div>
+                    <div class="qr-name">
+                        <i class="fas fa-user"></i>
+                        <span>{{ user.name if user and user.name else 'User' }}</span>
+                    </div>
+                </div>
+                <div class="qr-actions">
+                    <button class="btn-qr-action" id="refreshQrBtn" title="Refresh QR">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button class="btn-qr-action" id="downloadQrBtn" title="Download QR">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                    <button class="btn-qr-action" id="shareQrBtn" title="Share QR">
+                        <i class="fas fa-share-alt"></i> Share
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- UPI Status Card -->
+        <div class="upi-status-card">
+            <div class="upi-status-header">
+                <i class="fas fa-university"></i>
+                <h4>UPI Details</h4>
+            </div>
+            <div class="upi-status-content">
+                <div class="upi-status-item">
+                    <span class="status-label">Status:</span>
+                    <span class="status-value {% if user.upi_id %}status-active{% else %}status-inactive{% endif %}">
+                        {% if user.upi_id %}Active{% else %}Not Configured{% endif %}
+                    </span>
+                </div>
+                {% if user.upi_id %}
+                <div class="upi-status-item">
+                    <span class="status-label">UPI ID:</span>
+                    <span class="status-value upi-display">{{ user.upi_id }}</span>
+                </div>
+                <div class="upi-status-item">
+                    <span class="status-label">Linked To:</span>
+                    <span class="status-value">{{ user.phone if user and user.phone else 'Phone' }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% if not user.upi_id %}
+            <div class="upi-status-footer">
+                <a href="{{ url_for('setup_upi') }}" class="btn-setup-upi">
+                    <i class="fas fa-plus-circle"></i>
+                    Setup UPI ID
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Phone Status Card -->
+        <div class="phone-status-card">
+            <div class="phone-status-header">
+                <i class="fas fa-mobile-alt"></i>
+                <h4>Phone Details</h4>
+            </div>
+            <div class="phone-status-content">
+                <div class="phone-status-item">
+                    <span class="status-label">Phone Number:</span>
+                    <span class="status-value phone-display">{{ user.phone if user and user.phone else 'Not set' }}</span>
+                </div>
+                <div class="phone-status-item">
+                    <span class="status-label">Verification:</span>
+                    <span class="status-value status-verified">
+                        <i class="fas fa-check-circle"></i> Verified
+                    </span>
+                </div>
+                <div class="phone-status-item">
+                    <span class="status-label">Account Type:</span>
+                    <span class="status-value">Phone-based Wallet</span>
+                </div>
+            </div>
+            <div class="phone-status-footer">
+                <p class="phone-note">
+                    <i class="fas fa-info-circle"></i>
+                    Your phone number is your primary account identifier. It cannot be changed.
+                </p>
+            </div>
+        </div>
+        
+        <div class="profile-stats">
+            <div class="stat-card">
+                <i class="fas fa-wallet stat-icon"></i>
+                <div class="stat-content">
+                    <span class="stat-label">Current Balance</span>
+                    <span class="stat-value">₹{{ "%.2f"|format(user.balance) if user else '0.00' }}</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <i class="fas fa-exchange-alt stat-icon"></i>
+                <div class="stat-content">
+                    <span class="stat-label">Total Transactions</span>
+                    <span class="stat-value" id="totalTransactions">Loading...</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <i class="fas fa-user-friends stat-icon"></i>
+                <div class="stat-content">
+                    <span class="stat-label">Contacts</span>
+                    <span class="stat-value" id="totalContacts">Loading...</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="profile-actions">
+            <h3>Account Settings</h3>
+            
+            <div class="action-list">
+                <button class="action-item" id="viewUpiDetailsBtn">
+                    <i class="fas fa-qrcode action-icon"></i>
+                    <div class="action-content">
+                        <span class="action-title">UPI Details</span>
+                        <span class="action-desc">View and share your UPI ID</span>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                
+                <button class="action-item" id="scanOthersQrBtn">
+                    <i class="fas fa-camera action-icon"></i>
+                    <div class="action-content">
+                        <span class="action-title">Scan QR Code</span>
+                        <span class="action-desc">Scan other users' QR codes</span>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                
+                <button class="action-item" id="changePinBtn">
+                    <i class="fas fa-lock action-icon"></i>
+                    <div class="action-content">
+                        <span class="action-title">Change PIN</span>
+                        <span class="action-desc">Update your 6-digit security PIN</span>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                
+                <button class="action-item" id="securitySettingsBtn">
+                    <i class="fas fa-shield-alt action-icon"></i>
+                    <div class="action-content">
+                        <span class="action-title">Security Settings</span>
+                        <span class="action-desc">Manage security preferences</span>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                
+                <button class="action-item" id="transactionHistoryBtn">
+                    <i class="fas fa-history action-icon"></i>
+                    <div class="action-content">
+                        <span class="action-title">Transaction History</span>
+                        <span class="action-desc">View all transactions</span>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                
+                <button class="action-item" id="manageContactsBtn">
+                    <i class="fas fa-address-book action-icon"></i>
+                    <div class="action-content">
+                        <span class="action-title">Manage Contacts</span>
+                        <span class="action-desc">View and edit your contacts</span>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                
+                <a href="{{ url_for('logout') }}" class="action-item logout">
+                    <i class="fas fa-sign-out-alt action-icon"></i>
+                    <div class="action-content">
+                        <span class="action-title">Logout</span>
+                        <span class="action-desc">Sign out from this device</span>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+        
+        <div class="app-info">
+            <h3>About EasyCash</h3>
+            <div class="info-content">
+                <div class="info-item">
+                    <i class="fas fa-code"></i>
+                    <span>Version 1.0.0</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Secure & Encrypted</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-mobile-alt"></i>
+                    <span>Phone-Based Authentication</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>For Educational Purposes</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.profile-container {
+    padding: 20px;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.profile-card {
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+}
+
+.profile-avatar {
+    display: flex;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    color: white;
+    margin-right: 20px;
+}
+
+.avatar-info h3 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+}
+
+.member-since {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.phone-info {
+    display: flex;
+    align-items: center;
+    background: var(--dark-surface-light);
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-top: 8px;
+    border: 1px solid #333;
+}
+
+.phone-info i {
+    color: #34a853;
+    margin-right: 8px;
+}
+
+.phone-number {
+    flex: 1;
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--dark-text);
+}
+
+.btn-copy-phone {
+    background: transparent;
+    border: none;
+    color: var(--dark-text-secondary);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: var(--transition);
+}
+
+.btn-copy-phone:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #34a853;
+}
+
+.upi-info {
+    display: flex;
+    align-items: center;
+    background: var(--dark-surface-light);
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-top: 8px;
+    border: 1px solid #333;
+}
+
+.upi-info i {
+    color: var(--primary-color);
+    margin-right: 8px;
+}
+
+.upi-id {
+    flex: 1;
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--dark-text);
+}
+
+.btn-copy-upi {
+    background: transparent;
+    border: none;
+    color: var(--dark-text-secondary);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: var(--transition);
+}
+
+.btn-copy-upi:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--primary-color);
+}
+
+.no-upi {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 193, 7, 0.1);
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-top: 8px;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.no-upi i {
+    color: #ffc107;
+    margin-right: 8px;
+}
+
+.no-upi span {
+    flex: 1;
+    color: #ffc107;
+    font-size: 14px;
+}
+
+.setup-upi-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(26, 115, 232, 0.1);
+    transition: var(--transition);
+}
+
+.setup-upi-link:hover {
+    background: rgba(26, 115, 232, 0.2);
+}
+
+/* QR Code Section Styles */
+.qr-code-section {
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid #333;
+}
+
+.qr-code-section h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    color: var(--dark-text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.qr-container {
+    text-align: center;
+}
+
+.qr-code-placeholder {
+    width: 250px;
+    height: 250px;
+    margin: 0 auto 20px;
+    background: white;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #ddd;
+}
+
+.qr-code-placeholder i {
+    font-size: 48px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.qr-code-placeholder p {
+    color: #666;
+    font-size: 14px;
+}
+
+.qr-code-image {
+    width: 250px;
+    height: 250px;
+    margin: 0 auto 20px;
+    border-radius: 12px;
+    border: 1px solid #ddd;
+    background: white;
+    padding: 10px;
+}
+
+.qr-details {
+    background: var(--dark-surface);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid #444;
+}
+
+.qr-phone, .qr-upi-id, .qr-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+}
+
+.qr-phone i, .qr-upi-id i, .qr-name i {
+    color: var(--primary-color);
+    width: 20px;
+}
+
+.qr-phone span, .qr-upi-id span, .qr-name span {
+    flex: 1;
+    text-align: left;
+    font-family: monospace;
+    font-size: 14px;
+    word-break: break-all;
+}
+
+.qr-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.btn-qr-action {
+    padding: 10px 20px;
+    background: var(--dark-surface);
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.btn-qr-action:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-qr-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-qr-action:disabled:hover {
+    background: var(--dark-surface);
+    color: var(--primary-color);
+}
+
+/* Phone Status Card */
+.phone-status-card {
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid #333;
+}
+
+.phone-status-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.phone-status-header i {
+    font-size: 20px;
+    color: #34a853;
+    margin-right: 12px;
+}
+
+.phone-status-header h4 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--dark-text);
+}
+
+.phone-status-content {
+    margin-bottom: 16px;
+}
+
+.phone-status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #444;
+}
+
+.phone-status-item:last-child {
+    border-bottom: none;
+}
+
+.phone-display {
+    font-family: monospace;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #444;
+}
+
+.status-verified {
+    color: #34a853;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.phone-status-footer {
+    border-top: 1px solid #444;
+    padding-top: 16px;
+}
+
+.phone-note {
+    margin: 0;
+    color: var(--dark-text-secondary);
+    font-size: 13px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.5;
+}
+
+.phone-note i {
+    color: var(--primary-color);
+    margin-top: 2px;
+}
+
+.upi-status-card {
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid #333;
+}
+
+.upi-status-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.upi-status-header i {
+    font-size: 20px;
+    color: var(--primary-color);
+    margin-right: 12px;
+}
+
+.upi-status-header h4 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--dark-text);
+}
+
+.upi-status-content {
+    margin-bottom: 16px;
+}
+
+.upi-status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #444;
+}
+
+.upi-status-item:last-child {
+    border-bottom: none;
+}
+
+.status-label {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.status-value {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.status-active {
+    color: #4caf50;
+}
+
+.status-inactive {
+    color: #ff9800;
+}
+
+.upi-display {
+    font-family: monospace;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #444;
+}
+
+.upi-status-footer {
+    border-top: 1px solid #444;
+    padding-top: 16px;
+    text-align: center;
+}
+
+.btn-setup-upi {
+    display: inline-flex;
+    align-items: center;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.btn-setup-upi i {
+    margin-right: 8px;
+}
+
+.btn-setup-upi:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.profile-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.stat-icon {
+    font-size: 24px;
+    color: var(--primary-color);
+    margin-right: 16px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(26, 115, 232, 0.1);
+    border-radius: 50%;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-label {
+    display: block;
+    font-size: 14px;
+    color: var(--dark-text-secondary);
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 20px;
+    font-weight: 500;
+}
+
+.profile-actions {
+    margin-bottom: 32px;
+}
+
+.profile-actions h3 {
+    margin-bottom: 16px;
+    font-size: 18px;
+    color: var(--dark-text);
+}
+
+.action-list {
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.action-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    background: transparent;
+    border: none;
+    color: var(--dark-text);
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: var(--transition);
+    border-bottom: 1px solid #333;
+    text-decoration: none;
+}
+
+.action-item:last-child {
+    border-bottom: none;
+}
+
+.action-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.action-item.logout {
+    color: var(--danger-color);
+}
+
+.action-item.logout .action-icon {
+    color: var(--danger-color);
+}
+
+.action-icon {
+    font-size: 20px;
+    margin-right: 16px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+}
+
+.action-content {
+    flex: 1;
+}
+
+.action-title {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.action-desc {
+    display: block;
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+}
+
+.action-item i:last-child {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.app-info {
+    padding-top: 24px;
+    border-top: 1px solid #333;
+}
+
+.app-info h3 {
+    margin-bottom: 16px;
+    font-size: 18px;
+}
+
+.info-content {
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #333;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-item i {
+    width: 24px;
+    margin-right: 12px;
+    color: var(--primary-color);
+}
+
+/* Scanner Modal Styles */
+.scanner-modal {
+    max-width: 500px;
+}
+
+.scanner-container {
+    text-align: center;
+    padding: 20px;
+}
+
+.scanner-video {
+    width: 100%;
+    max-width: 300px;
+    height: 300px;
+    background: #000;
+    border-radius: 12px;
+    margin: 0 auto 20px;
+    object-fit: cover;
+}
+
+.scanner-placeholder {
+    width: 100%;
+    max-width: 300px;
+    height: 300px;
+    background: #f5f5f5;
+    border-radius: 12px;
+    margin: 0 auto 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #ddd;
+}
+
+.scanner-placeholder i {
+    font-size: 64px;
+    color: #666;
+    margin-bottom: 16px;
+}
+
+.scanner-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.btn-scanner-action {
+    padding: 10px 20px;
+    background: var(--dark-surface);
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.btn-scanner-action:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.scanner-result {
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--dark-surface-light);
+    border-radius: 8px;
+    text-align: left;
+}
+
+.scanner-result h4 {
+    margin: 0 0 10px 0;
+    color: var(--dark-text);
+}
+
+.scanner-details {
+    background: var(--dark-surface);
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+
+.scanner-detail-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #444;
+}
+
+.scanner-detail-item:last-child {
+    border-bottom: none;
+}
+
+/* Self-scan warning */
+.self-scan-warning {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+    text-align: center;
+}
+
+.self-scan-warning i {
+    color: #ffc107;
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.self-scan-warning h4 {
+    color: #ffc107;
+    margin: 0 0 8px 0;
+}
+
+.self-scan-warning p {
+    color: #ffc107;
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-content {
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    padding: 24px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: var(--shadow);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h3 {
+    margin: 0;
+}
+
+.close-modal {
+    background: transparent;
+    border: none;
+    color: var(--dark-text-secondary);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* UPI Details Modal specific styles */
+.upi-details-modal {
+    max-width: 450px;
+}
+
+.upi-qr-container {
+    text-align: center;
+    margin: 20px 0;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+}
+
+.upi-qr-placeholder {
+    width: 200px;
+    height: 200px;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    border-radius: 8px;
+}
+
+.upi-qr-placeholder i {
+    font-size: 64px;
+    color: #666;
+}
+
+.upi-details {
+    background: var(--dark-surface-light);
+    padding: 16px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.upi-detail-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #444;
+}
+
+.upi-detail-item:last-child {
+    border-bottom: none;
+}
+
+.upi-detail-label {
+    color: var(--dark-text-secondary);
+}
+
+.upi-detail-value {
+    font-weight: 500;
+    font-family: monospace;
+}
+
+.share-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn-share {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-share-copy {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-share-copy:hover {
+    background: var(--primary-dark);
+}
+
+.btn-share-whatsapp {
+    background: #25D366;
+    color: white;
+}
+
+.btn-share-whatsapp:hover {
+    background: #1da851;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .profile-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .qr-actions {
+        flex-direction: column;
+    }
+    
+    .share-buttons {
+        flex-direction: column;
+    }
+    
+    .scanner-controls {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-avatar {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .avatar {
+        margin-right: 0;
+        margin-bottom: 16px;
+    }
+    
+    .phone-info, .upi-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .btn-copy-phone, .btn-copy-upi {
+        align-self: flex-end;
+    }
+    
+    .qr-code-placeholder, .qr-code-image {
+        width: 200px;
+        height: 200px;
+    }
+    
+    .scanner-video, .scanner-placeholder {
+        max-width: 250px;
+        height: 250px;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load statistics
+    loadStatistics();
+    
+    // Copy phone number functionality
+    const copyPhoneBtn = document.querySelector('.btn-copy-phone');
+    if (copyPhoneBtn) {
+        copyPhoneBtn.addEventListener('click', function() {
+            const phoneNumber = document.querySelector('.phone-number').textContent;
+            if (phoneNumber && phoneNumber !== 'Not available') {
+                navigator.clipboard.writeText(phoneNumber)
+                    .then(() => {
+                        showToast('Phone number copied to clipboard!', 'success');
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy: ', err);
+                        showToast('Failed to copy phone number', 'error');
+                    });
+            } else {
+                showToast('No phone number available', 'error');
+            }
+        });
+    }
+    
+    // Copy UPI ID functionality
+    const copyUpiBtn = document.querySelector('.btn-copy-upi');
+    if (copyUpiBtn) {
+        copyUpiBtn.addEventListener('click', function() {
+            const upiId = document.querySelector('.upi-id').textContent;
+            navigator.clipboard.writeText(upiId)
+                .then(() => {
+                    showToast('UPI ID copied to clipboard!', 'success');
+                })
+                .catch(err => {
+                    console.error('Failed to copy: ', err);
+                    showToast('Failed to copy UPI ID', 'error');
+                });
+        });
+    }
+    
+    // QR Code functionality
+    const qrCodePlaceholder = document.getElementById('qrCodePlaceholder');
+    const refreshQrBtn = document.getElementById('refreshQrBtn');
+    const downloadQrBtn = document.getElementById('downloadQrBtn');
+    const shareQrBtn = document.getElementById('shareQrBtn');
+    const qrPhone = document.getElementById('qrPhone');
+    const qrUpiId = document.getElementById('qrUpiId');
+    
+    let currentQrImage = null;
+    let currentQrData = null;
+    
+    // Load QR code from server
+    function loadQRCode() {
+        const phone = qrPhone.textContent.trim();
+        const upiId = qrUpiId.textContent.trim();
+        
+        if (!phone || phone === 'Phone not set' || phone === 'Loading...') {
+            qrCodePlaceholder.innerHTML = `
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Phone number not set</p>
+            `;
+            refreshQrBtn.disabled = true;
+            downloadQrBtn.disabled = true;
+            shareQrBtn.disabled = true;
+            return;
+        }
+        
+        qrCodePlaceholder.innerHTML = `
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Generating QR code...</p>
+        `;
+        
+        // Disable buttons while loading
+        refreshQrBtn.disabled = true;
+        downloadQrBtn.disabled = true;
+        shareQrBtn.disabled = true;
+        
+        // Fetch QR code from server
+        fetch(`/qr/generate/${phone}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success && data.qr_image) {
+                    currentQrImage = data.qr_image;
+                    currentQrData = data.upi_payload;
+                    
+                    qrCodePlaceholder.innerHTML = `
+                        <img src="${data.qr_image}" 
+                             alt="EasyCash QR Code" 
+                             style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;">
+                    `;
+                    qrCodePlaceholder.className = 'qr-code-placeholder qr-code-loaded';
+                    
+                    // Enable buttons
+                    refreshQrBtn.disabled = false;
+                    downloadQrBtn.disabled = false;
+                    shareQrBtn.disabled = false;
+                    
+                    showToast('QR code generated successfully!', 'success');
+                } else {
+                    throw new Error(data.error || 'Failed to generate QR code');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading QR code:', error);
+                
+                // Fallback to client-side QR generation if server fails
+                generateFallbackQRCode(phone, upiId);
+                
+                showToast('Using fallback QR code', 'warning');
+            });
+    }
+    
+    // Fallback QR code generation (client-side)
+    function generateFallbackQRCode(phone, upiId) {
+        try {
+            // Use QRCode.js library if available
+            if (typeof QRCode !== 'undefined') {
+                qrCodePlaceholder.innerHTML = '';
+                new QRCode(qrCodePlaceholder, {
+                    text: `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(phone)}&cu=INR`,
+                    width: 200,
+                    height: 200,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                
+                // Get the generated image
+                const qrImg = qrCodePlaceholder.querySelector('img');
+                if (qrImg) {
+                    currentQrImage = qrImg.src;
+                    currentQrData = `upi://pay?pa=${upiId}&pn=${phone}&cu=INR`;
+                }
+                
+                // Enable buttons
+                refreshQrBtn.disabled = false;
+                downloadQrBtn.disabled = false;
+                shareQrBtn.disabled = false;
+            } else {
+                // Simple text-based fallback
+                throw new Error('QRCode library not loaded');
+            }
+        } catch (error) {
+            console.error('Fallback QR generation failed:', error);
+            
+            qrCodePlaceholder.innerHTML = `
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>QR generation failed</p>
+                <small>${phone}</small>
+            `;
+            
+            refreshQrBtn.disabled = false;
+            downloadQrBtn.disabled = true;
+            shareQrBtn.disabled = true;
+            
+            showToast('QR code generation failed. Please try again.', 'error');
+        }
+    }
+    
+    // Download QR code
+    function downloadQRCode() {
+        if (!currentQrImage) {
+            showToast('No QR code available to download', 'error');
+            return;
+        }
+        
+        try {
+            // Convert base64 to blob
+            const base64Data = currentQrImage.split(',')[1];
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'image/png' });
+            
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `EasyCash_QR_${qrPhone.textContent}.png`;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Cleanup
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+            
+            showToast('QR code downloaded!', 'success');
+        } catch (error) {
+            console.error('Download error:', error);
+            showToast('Failed to download QR code', 'error');
+        }
+    }
+    
+    // Share QR code
+    function shareQRCode() {
+        if (!currentQrImage) {
+            showToast('No QR code available to share', 'error');
+            return;
+        }
+        
+        const phone = qrPhone.textContent;
+        const upiId = qrUpiId.textContent;
+        
+        const shareData = {
+            title: 'My EasyCash QR Code',
+            text: `Phone: ${phone}\nUPI: ${upiId}\n\nScan to add me as a contact on EasyCash`,
+            url: currentQrImage
+        };
+        
+        if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+            navigator.share(shareData)
+                .then(() => showToast('QR code shared!', 'success'))
+                .catch(err => {
+                    console.error('Share failed:', err);
+                    // Fallback to copy UPI ID
+                    copyToClipboard(upiId, 'UPI ID copied to clipboard!');
+                });
+        } else {
+            // Fallback: copy UPI ID
+            copyToClipboard(upiId, 'UPI ID copied to clipboard!');
+        }
+    }
+    
+    // Helper function to copy to clipboard
+    function copyToClipboard(text, successMessage) {
+        if (!text || text === 'Setup UPI ID first') {
+            showToast('No UPI ID available to copy', 'error');
+            return;
+        }
+        
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    showToast(successMessage, 'success');
+                })
+                .catch(err => {
+                    fallbackCopy(text, successMessage);
+                });
+        } else {
+            fallbackCopy(text, successMessage);
+        }
+    }
+    
+    function fallbackCopy(text, successMessage) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showToast(successMessage, 'success');
+            } else {
+                showToast('Failed to copy', 'error');
+            }
+        } catch (err) {
+            console.error('Failed to copy:', err);
+            showToast('Failed to copy', 'error');
+        }
+        
+        document.body.removeChild(textArea);
+    }
+    
+    // Helper function to show toast
+    function showToast(message, type = 'info') {
+        // Remove existing toast
+        const existingToast = document.querySelector('.toast-notification');
+        if (existingToast) {
+            existingToast.remove();
+        }
+        
+        // Create toast
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${type}`;
+        toast.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        `;
+        document.body.appendChild(toast);
+        
+        // Show toast with animation
+        setTimeout(() => toast.classList.add('show'), 10);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    
+    // Add toast styles if not present
+    if (!document.querySelector('#toast-styles')) {
+        const style = document.createElement('style');
+        style.id = 'toast-styles';
+        style.textContent = `
+            .toast-notification {
+                position: fixed;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%) translateY(100px);
+                background: var(--dark-surface);
+                color: var(--dark-text);
+                padding: 16px 24px;
+                border-radius: 12px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                z-index: 9999;
+                opacity: 0;
+                transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                max-width: 90%;
+                text-align: center;
+                border: 1px solid var(--border-color);
+                backdrop-filter: blur(10px);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            
+            .toast-notification.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+            
+            .toast-notification.success {
+                background: linear-gradient(135deg, #27ae60, #219653);
+                color: white;
+                border-color: rgba(39, 174, 96, 0.3);
+            }
+            
+            .toast-notification.error {
+                background: linear-gradient(135deg, #e74c3c, #c0392b);
+                color: white;
+                border-color: rgba(231, 76, 60, 0.3);
+            }
+            
+            .toast-notification.info {
+                background: linear-gradient(135deg, #3498db, #2980b9);
+                color: white;
+                border-color: rgba(52, 152, 219, 0.3);
+            }
+            
+            .toast-notification.warning {
+                background: linear-gradient(135deg, #f39c12, #e67e22);
+                color: white;
+                border-color: rgba(243, 156, 18, 0.3);
+            }
+            
+            .qr-code-loaded {
+                border: 1px solid #ddd !important;
+                border-style: solid !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Event listeners for QR buttons
+    refreshQrBtn.addEventListener('click', loadQRCode);
+    downloadQrBtn.addEventListener('click', downloadQRCode);
+    shareQrBtn.addEventListener('click', shareQRCode);
+    
+    // Initial load
+    loadQRCode();
+    
+    // Create Scanner Modal
+    const scannerModal = document.createElement('div');
+    scannerModal.className = 'modal';
+    scannerModal.innerHTML = `
+        <div class="modal-content scanner-modal">
+            <div class="modal-header">
+                <h3>Scan QR Code</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="scanner-container">
+                    <div class="scanner-placeholder" id="scannerPlaceholder">
+                        <i class="fas fa-camera"></i>
+                        <p>Click Start Scanner to begin</p>
+                    </div>
+                    <video class="scanner-video" id="scannerVideo" style="display: none;"></video>
+                    <canvas id="scannerCanvas" style="display: none;"></canvas>
+                    
+                    <div class="scanner-controls">
+                        <button class="btn-scanner-action" id="startScannerBtn">
+                            <i class="fas fa-play"></i> Start Scanner
+                        </button>
+                        <button class="btn-scanner-action" id="stopScannerBtn" style="display: none;">
+                            <i class="fas fa-stop"></i> Stop Scanner
+                        </button>
+                        <button class="btn-scanner-action" id="uploadQrBtn">
+                            <i class="fas fa-upload"></i> Upload Image
+                        </button>
+                    </div>
+                    
+                    <div id="scannerResult" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(scannerModal);
+    
+    // Scanner variables
+    let scannerStream = null;
+    let scannerInterval = null;
+    const scannerVideo = scannerModal.querySelector('#scannerVideo');
+    const scannerCanvas = scannerModal.querySelector('#scannerCanvas');
+    const scannerPlaceholder = scannerModal.querySelector('#scannerPlaceholder');
+    const scannerResult = scannerModal.querySelector('#scannerResult');
+    const startScannerBtn = scannerModal.querySelector('#startScannerBtn');
+    const stopScannerBtn = scannerModal.querySelector('#stopScannerBtn');
+    const uploadQrBtn = scannerModal.querySelector('#uploadQrBtn');
+    const userPhone = '{{ user.phone }}';
+    
+    // Open scanner modal
+    function openScannerModal() {
+        scannerModal.style.display = 'flex';
+        scannerResult.style.display = 'none';
+        scannerPlaceholder.style.display = 'flex';
+        scannerVideo.style.display = 'none';
+        stopScannerBtn.style.display = 'none';
+        startScannerBtn.style.display = 'inline-flex';
+        
+        // Stop any existing scanner
+        stopScanner();
+    }
+    
+    // Close scanner modal
+    function closeScannerModal() {
+        scannerModal.style.display = 'none';
+        stopScanner();
+    }
+    
+    // Start scanner
+    async function startScanner() {
+        try {
+            // Request camera access
+            scannerStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: 'environment',
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                } 
+            });
+            
+            // Set up video stream
+            scannerVideo.srcObject = scannerStream;
+            scannerVideo.play();
+            
+            // Show video, hide placeholder
+            scannerVideo.style.display = 'block';
+            scannerPlaceholder.style.display = 'none';
+            startScannerBtn.style.display = 'none';
+            stopScannerBtn.style.display = 'inline-flex';
+            
+            // Start scanning
+            scannerInterval = setInterval(scanQRCode, 500);
+            
+            showToast('Scanner started successfully!', 'success');
+        } catch (error) {
+            console.error('Error accessing camera:', error);
+            showToast('Failed to access camera. Please check permissions.', 'error');
+            
+            // Show error in placeholder
+            scannerPlaceholder.innerHTML = `
+                <i class="fas fa-video-slash"></i>
+                <p>Camera access denied</p>
+                <small>Please allow camera access to scan QR codes</small>
+            `;
+        }
+    }
+    
+    // Stop scanner
+    function stopScanner() {
+        if (scannerInterval) {
+            clearInterval(scannerInterval);
+            scannerInterval = null;
+        }
+        
+        if (scannerStream) {
+            scannerStream.getTracks().forEach(track => track.stop());
+            scannerStream = null;
+        }
+        
+        scannerVideo.srcObject = null;
+    }
+    
+    // Scan QR code from video stream
+    function scanQRCode() {
+        if (!scannerStream) return;
+        
+        const canvas = scannerCanvas;
+        const context = canvas.getContext('2d');
+        
+        // Set canvas dimensions to match video
+        canvas.width = scannerVideo.videoWidth;
+        canvas.height = scannerVideo.videoHeight;
+        
+        // Draw current video frame to canvas
+        context.drawImage(scannerVideo, 0, 0, canvas.width, canvas.height);
+        
+        // Get image data
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Try to decode QR code
+        try {
+            // This is where you would use a QR code library
+            // For now, we'll use a simple text-based approach
+            // In production, use a library like jsQR or ZXing
+            
+            // Simulate QR code detection for demo
+            // In real implementation, use: const code = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            // For now, we'll skip actual QR decoding and just show demo
+            // This is where you would add your QR code library
+            
+        } catch (error) {
+            console.error('QR scanning error:', error);
+        }
+    }
+    
+    // Handle QR code validation
+    function handleScannedQR(qrData) {
+        console.log('QR Data scanned:', qrData);
+        
+        // Validate the QR data
+        fetch('/qr/validate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ qr_data: qrData })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Check if this is the user's own QR code
+                const scannedPhone = extractPhoneFromQRData(qrData);
+                
+                if (scannedPhone && scannedPhone === userPhone) {
+                    // Show self-scan warning
+                    scannerResult.innerHTML = `
+                        <div class="self-scan-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h4>Cannot Scan Your Own QR Code</h4>
+                            <p>You are trying to scan your own QR code. Please scan other users' QR codes to send money or add them as contacts.</p>
+                            <button class="btn-scanner-action" onclick="resetScanner()" style="margin-top: 10px;">
+                                <i class="fas fa-redo"></i> Scan Another QR
+                            </button>
+                        </div>
+                    `;
+                    scannerResult.style.display = 'block';
+                    showToast('You cannot scan your own QR code!', 'warning');
+                } else {
+                    // Valid QR code from another user
+                    displayQRResult(data, qrData);
+                    showToast('QR code scanned successfully!', 'success');
+                }
+            } else {
+                // Invalid QR code
+                scannerResult.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <i class="fas fa-times-circle" style="color: #e74c3c; font-size: 48px; margin-bottom: 15px;"></i>
+                        <h4 style="color: #e74c3c; margin: 0 0 10px 0;">Invalid QR Code</h4>
+                        <p style="color: var(--dark-text-secondary); margin: 0 0 15px 0;">${data.error || 'Could not read QR code'}</p>
+                        <button class="btn-scanner-action" onclick="resetScanner()">
+                            <i class="fas fa-redo"></i> Try Again
+                        </button>
+                    </div>
+                `;
+                scannerResult.style.display = 'block';
+                showToast('Invalid QR code', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Validation error:', error);
+            showToast('Error validating QR code', 'error');
+        });
+    }
+    
+    // Extract phone number from QR data
+    function extractPhoneFromQRData(qrData) {
+        try {
+            // Try to extract phone number from various QR formats
+            const phonePattern = /(\+91)?([6-9]\d{9})/g;
+            const match = phonePattern.exec(qrData);
+            if (match) {
+                // Return phone without country code
+                return match[2];
+            }
+            
+            // Check for phone-based UPI ID
+            const upiPattern = /(\+91)?([6-9]\d{9})@easycash/gi;
+            const upiMatch = upiPattern.exec(qrData);
+            if (upiMatch) {
+                return upiMatch[2];
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('Error extracting phone:', error);
+            return null;
+        }
+    }
+    
+    // Display QR scan result
+    function displayQRResult(data, qrData) {
+        const userData = data.user;
+        
+        scannerResult.innerHTML = `
+            <h4>QR Code Scanned Successfully!</h4>
+            <div class="scanner-details">
+                ${userData.is_registered ? `
+                    <div class="scanner-detail-item">
+                        <span>User Found:</span>
+                        <span>Yes</span>
+                    </div>
+                    <div class="scanner-detail-item">
+                        <span>Phone:</span>
+                        <span>${userData.phone || 'Not available'}</span>
+                    </div>
+                    <div class="scanner-detail-item">
+                        <span>UPI ID:</span>
+                        <span>${userData.upi_id || 'Not set'}</span>
+                    </div>
+                    ${userData.name ? `
+                    <div class="scanner-detail-item">
+                        <span>Name:</span>
+                        <span>${userData.name}</span>
+                    </div>
+                    ` : ''}
+                    <div class="scanner-controls" style="margin-top: 15px;">
+                        <button class="btn-scanner-action" onclick="redirectToSendMoney('${userData.upi_id || userData.phone}', '${userData.name || 'User'}')">
+                            <i class="fas fa-paper-plane"></i> Send Money
+                        </button>
+                        <button class="btn-scanner-action" onclick="addToContacts('${userData.phone}', '${userData.name || ''}')">
+                            <i class="fas fa-user-plus"></i> Add to Contacts
+                        </button>
+                    </div>
+                ` : `
+                    <div class="scanner-detail-item">
+                        <span>User Found:</span>
+                        <span>No</span>
+                    </div>
+                    <div class="scanner-detail-item">
+                        <span>UPI ID:</span>
+                        <span>${userData.upi_id || 'Not available'}</span>
+                    </div>
+                    <p style="color: var(--dark-text-secondary); margin-top: 10px;">
+                        This user is not registered with EasyCash. You can still send money to this UPI ID.
+                    </p>
+                    <div class="scanner-controls" style="margin-top: 15px;">
+                        <button class="btn-scanner-action" onclick="redirectToSendMoney('${userData.upi_id}', 'External User')">
+                            <i class="fas fa-paper-plane"></i> Send Money
+                        </button>
+                    </div>
+                `}
+            </div>
+            <button class="btn-scanner-action" onclick="resetScanner()" style="margin-top: 15px; width: 100%;">
+                <i class="fas fa-redo"></i> Scan Another QR
+            </button>
+        `;
+        scannerResult.style.display = 'block';
+    }
+    
+    // Reset scanner
+    function resetScanner() {
+        scannerResult.style.display = 'none';
+        if (scannerStream) {
+            scannerVideo.style.display = 'block';
+            scannerPlaceholder.style.display = 'none';
+        } else {
+            scannerVideo.style.display = 'none';
+            scannerPlaceholder.style.display = 'flex';
+        }
+    }
+    
+    // Redirect to send money page
+    window.redirectToSendMoney = function(identifier, name) {
+        closeScannerModal();
+        sessionStorage.setItem('qrScannedIdentifier', identifier);
+        sessionStorage.setItem('qrScannedName', name);
+        window.location.href = '/send-money';
+    };
+    
+    // Add to contacts
+    window.addToContacts = function(phone, name) {
+        if (!phone) {
+            showToast('Cannot add contact: No phone number found', 'error');
+            return;
+        }
+        
+        fetch('/api/contacts/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Phone-Session': 'true'
+            },
+            body: JSON.stringify({
+                contact_phone: phone,
+                nickname: name || ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Contact added successfully!', 'success');
+                closeScannerModal();
+            } else {
+                showToast(data.error || 'Failed to add contact', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error adding contact:', error);
+            showToast('Error adding contact', 'error');
+        });
+    };
+    
+    // Upload QR code from image
+    function uploadQRImage() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        
+        input.onchange = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Show loading
+            scannerPlaceholder.innerHTML = `
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Processing image...</p>
+            `;
+            scannerPlaceholder.style.display = 'flex';
+            scannerVideo.style.display = 'none';
+            
+            // Upload to server for processing
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/qr/scan/file', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    handleScannedQR(data.qr_data);
+                } else {
+                    scannerPlaceholder.innerHTML = `
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>${data.error || 'Failed to read QR code'}</p>
+                        <button class="btn-scanner-action" onclick="resetScanner()" style="margin-top: 10px;">
+                            <i class="fas fa-redo"></i> Try Again
+                        </button>
+                    `;
+                    showToast('Failed to read QR code from image', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Upload error:', error);
+                scannerPlaceholder.innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Error processing image</p>
+                    <button class="btn-scanner-action" onclick="resetScanner()" style="margin-top: 10px;">
+                        <i class="fas fa-redo"></i> Try Again
+                    </button>
+                `;
+                showToast('Error processing image', 'error');
+            });
+        };
+        
+        input.click();
+    }
+    
+    // Event listeners for scanner
+    startScannerBtn.addEventListener('click', startScanner);
+    stopScannerBtn.addEventListener('click', stopScanner);
+    uploadQrBtn.addEventListener('click', uploadQRImage);
+    scannerModal.querySelector('.close-modal').addEventListener('click', closeScannerModal);
+    
+    // Close modal on background click
+    scannerModal.addEventListener('click', (e) => {
+        if (e.target === scannerModal) {
+            closeScannerModal();
+        }
+    });
+    
+    // Create UPI Details modal
+    const upiModal = document.createElement('div');
+    upiModal.className = 'modal';
+    upiModal.innerHTML = `
+        <div class="modal-content upi-details-modal">
+            <div class="modal-header">
+                <h3>UPI Details</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="upi-qr-container">
+                    <div id="modalQrCode" class="upi-qr-placeholder">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    <p style="margin-top: 10px; color: #666; font-size: 12px;">
+                        Scan to pay using any UPI app
+                    </p>
+                </div>
+                
+                <div class="upi-details">
+                    <div class="upi-detail-item">
+                        <span class="upi-detail-label">UPI ID:</span>
+                        <span class="upi-detail-value" id="modalUpiId">{{ user.upi_id if user.upi_id else 'Not set' }}</span>
+                    </div>
+                    <div class="upi-detail-item">
+                        <span class="upi-detail-label">Linked Phone:</span>
+                        <span class="upi-detail-value">{{ user.phone }}</span>
+                    </div>
+                    <div class="upi-detail-item">
+                        <span class="upi-detail-label">Account Name:</span>
+                        <span class="upi-detail-value">{{ user.name if user.name else user.phone }}</span>
+                    </div>
+                    <div class="upi-detail-item">
+                        <span class="upi-detail-label">Status:</span>
+                        <span class="upi-detail-value">
+                            {% if user.upi_id %}
+                            <span style="color: #4caf50;">●</span> Active
+                            {% else %}
+                            <span style="color: #ff9800;">●</span> Inactive
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                
+                {% if user.upi_id %}
+                <div class="share-buttons">
+                    <button class="btn-share btn-share-copy" id="copyUpiBtn">
+                        <i class="far fa-copy"></i>
+                        Copy UPI ID
+                    </button>
+                    <button class="btn-share btn-share-whatsapp" id="shareWhatsAppBtn">
+                        <i class="fab fa-whatsapp"></i>
+                        Share
+                    </button>
+                </div>
+                {% else %}
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="{{ url_for('setup_upi') }}" class="btn-setup-upi">
+                        <i class="fas fa-plus-circle"></i>
+                        Setup UPI ID
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(upiModal);
+    
+    // UPI modal controls
+    const openUpiModal = () => {
+        upiModal.style.display = 'flex';
+        
+        // Load QR code in modal
+        const modalQrCode = document.getElementById('modalQrCode');
+        const phone = '{{ user.phone }}';
+        
+        if (phone && phone.length === 10) {
+            modalQrCode.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            fetch(`/qr/generate/${phone}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.qr_image) {
+                        modalQrCode.innerHTML = `
+                            <img src="${data.qr_image}" 
+                                 alt="UPI QR Code" 
+                                 style="width: 200px; height: 200px; object-fit: contain;">
+                        `;
+                        modalQrCode.className = 'upi-qr-placeholder qr-code-loaded';
+                    } else {
+                        modalQrCode.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading modal QR:', error);
+                    modalQrCode.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                });
+        }
+    };
+    
+    const closeUpiModal = () => {
+        upiModal.style.display = 'none';
+    };
+    
+    // Create Phone Details modal
+    const phoneModal = document.createElement('div');
+    phoneModal.className = 'modal';
+    phoneModal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Phone Details</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="phone-details">
+                    <div class="detail-item">
+                        <i class="fas fa-phone"></i>
+                        <div class="detail-content">
+                            <span class="detail-label">Phone Number</span>
+                            <span class="detail-value">{{ user.phone }}</span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-shield-alt"></i>
+                        <div class="detail-content">
+                            <span class="detail-label">Verification Status</span>
+                            <span class="detail-value" style="color: #4caf50;">
+                                <i class="fas fa-check-circle"></i> Verified
+                            </span>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <div class="detail-content">
+                            <span class="detail-label">Registered Since</span>
+                            <span class="detail-value">{{ user.created_at[:10] if user else 'Unknown' }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="phone-info-note">
+                    <i class="fas fa-info-circle"></i>
+                    <p>Your phone number is your primary account identifier in EasyCash. It cannot be changed for security reasons.</p>
+                </div>
+                
+                <div class="share-buttons" style="margin-top: 20px;">
+                    <button class="btn-share btn-share-copy" id="copyPhoneBtn">
+                        <i class="far fa-copy"></i>
+                        Copy Phone Number
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(phoneModal);
+    
+    // Event listeners for modals
+    document.getElementById('viewUpiDetailsBtn').addEventListener('click', openUpiModal);
+    document.getElementById('scanQrBtn').addEventListener('click', openScannerModal);
+    document.getElementById('scanOthersQrBtn').addEventListener('click', openScannerModal);
+    
+    document.getElementById('editProfileBtn').addEventListener('click', () => {
+        // Show phone details modal when edit is clicked
+        phoneModal.style.display = 'flex';
+    });
+    
+    upiModal.querySelector('.close-modal').addEventListener('click', closeUpiModal);
+    phoneModal.querySelector('.close-modal').addEventListener('click', () => {
+        phoneModal.style.display = 'none';
+    });
+    
+    upiModal.querySelector('#copyUpiBtn')?.addEventListener('click', function() {
+        const upiId = document.getElementById('modalUpiId').textContent;
+        if (upiId !== 'Not set') {
+            copyToClipboard(upiId, 'UPI ID copied to clipboard!');
+        }
+    });
+    
+    phoneModal.querySelector('#copyPhoneBtn')?.addEventListener('click', function() {
+        copyToClipboard('{{ user.phone }}', 'Phone number copied to clipboard!');
+    });
+    
+    upiModal.querySelector('#shareWhatsAppBtn')?.addEventListener('click', function() {
+        const upiId = document.getElementById('modalUpiId').textContent;
+        if (upiId !== 'Not set') {
+            const message = `Pay me using my UPI ID: ${upiId}\n\nPhone: {{ user.phone }}\nAccount: {{ user.name if user.name else user.phone }}\n\nSent via EasyCash`;
+            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+    });
+    
+    // Close modals on background click
+    [upiModal, phoneModal].forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                if (modal === upiModal) closeUpiModal();
+                else phoneModal.style.display = 'none';
+            }
+        });
+    });
+    
+    // Create PIN change modal
+    const pinModal = document.createElement('div');
+    pinModal.className = 'modal';
+    pinModal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Change PIN</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="changePinForm">
+                    <div class="form-group">
+                        <label for="currentPin">Current PIN</label>
+                        <input type="password" 
+                               id="currentPin" 
+                               placeholder="Enter current 6-digit PIN"
+                               maxlength="6"
+                               minlength="6"
+                               pattern="\\d{6}"
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPin">New PIN</label>
+                        <input type="password" 
+                               id="newPin" 
+                               placeholder="Enter new 6-digit PIN"
+                               maxlength="6"
+                               minlength="6"
+                               pattern="\\d{6}"
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPin">Confirm New PIN</label>
+                        <input type="password" 
+                               id="confirmPin" 
+                               placeholder="Confirm new 6-digit PIN"
+                               maxlength="6"
+                               minlength="6"
+                               pattern="\\d{6}"
+                               required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="cancelPinChangeBtn">Cancel</button>
+                        <button type="submit" class="btn-primary">Change PIN</button>
+                    </div>
+                </form>
+                <div class="pin-note">
+                    <i class="fas fa-info-circle"></i>
+                    <p>Your PIN is used to authorize transactions. Keep it secure and don't share it with anyone.</p>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(pinModal);
+    
+    // PIN modal controls
+    const openPinModal = () => {
+        pinModal.style.display = 'flex';
+    };
+    
+    const closePinModal = () => {
+        pinModal.style.display = 'none';
+        document.getElementById('changePinForm').reset();
+    };
+    
+    // PIN form submission
+    document.getElementById('changePinForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const currentPin = document.getElementById('currentPin').value;
+        const newPin = document.getElementById('newPin').value;
+        const confirmPin = document.getElementById('confirmPin').value;
+        
+        if (newPin !== confirmPin) {
+            showToast('New PIN and confirmation do not match', 'error');
+            return;
+        }
+        
+        if (newPin === currentPin) {
+            showToast('New PIN cannot be the same as current PIN', 'error');
+            return;
+        }
+        
+        // In a real app, you would send this to the server
+        showToast('PIN change request sent. Please check your phone for OTP verification.', 'info');
+        closePinModal();
+    });
+    
+    // Other event listeners
+    document.getElementById('changePinBtn').addEventListener('click', openPinModal);
+    document.getElementById('securitySettingsBtn').addEventListener('click', () => {
+        showToast('Security settings coming soon!', 'info');
+    });
+    
+    document.getElementById('transactionHistoryBtn').addEventListener('click', () => {
+        window.location.href = '/transactions';
+    });
+    
+    document.getElementById('manageContactsBtn').addEventListener('click', () => {
+        window.location.href = '/contacts';
+    });
+    
+    pinModal.querySelector('.close-modal').addEventListener('click', closePinModal);
+    pinModal.querySelector('#cancelPinChangeBtn').addEventListener('click', closePinModal);
+    
+    // Close PIN modal on background click
+    pinModal.addEventListener('click', (e) => {
+        if (e.target === pinModal) {
+            closePinModal();
+        }
+    });
+    
+    // Load statistics
+    function loadStatistics() {
+        // Get transaction count
+        fetch('/api/transactions/count', {
+            headers: {
+                'X-Phone-Session': 'true'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('totalTransactions').textContent = data.count || '0';
+            })
+            .catch(error => {
+                console.error('Error loading transaction count:', error);
+                document.getElementById('totalTransactions').textContent = '0';
+            });
+        
+        // Get contacts count
+        fetch('/api/contacts/count', {
+            headers: {
+                'X-Phone-Session': 'true'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('totalContacts').textContent = data.count || '0';
+            })
+            .catch(error => {
+                console.error('Error loading contacts count:', error);
+                document.getElementById('totalContacts').textContent = '0';
+            });
+    }
+    
+    // Session timeout warning
+    let timeoutWarningShown = false;
+    setInterval(() => {
+        // Check session expiry every minute
+        if (!timeoutWarningShown) {
+            setTimeout(() => {
+                showToast('Your session will expire soon', 'warning');
+                timeoutWarningShown = true;
+            }, 10 * 60 * 1000);
+        }
+    }, 60 * 1000);
+    
+    // Add QRCode.js library for fallback
+    if (typeof QRCode === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+        script.onload = function() {
+            console.log('QRCode.js loaded for fallback');
+        };
+        document.head.appendChild(script);
+    }
+    
+    // Demo function for testing self-scan detection
+    function demoScanOwnQR() {
+        const userPhone = '{{ user.phone }}';
+        const userUpiId = '{{ user.upi_id if user.upi_id else user.phone + "@easycash" }}';
+        const demoQRData = `upi://pay?pa=${userUpiId}&pn=${userPhone}&cu=INR`;
+        handleScannedQR(demoQRData);
+    }
+});
+</script>
+{% endblock %}

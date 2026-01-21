@@ -1,0 +1,1774 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="success-container">
+    <div class="success-card">
+        <div class="success-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        
+        <h2>Payment Successful!</h2>
+        <p class="success-subtitle">Your payment has been processed successfully</p>
+        
+        <!-- Transaction Details Card -->
+        <div class="transaction-details-card">
+            <div class="details-header">
+                <h3><i class="fas fa-receipt"></i> Transaction Details</h3>
+                <span class="badge badge-success">Completed</span>
+            </div>
+            
+            <div class="details-body">
+                <!-- Amount Section -->
+                <div class="detail-section amount-section">
+                    <div class="detail-label">Amount Sent</div>
+                    <div class="detail-value amount-positive">₹{{ "%.2f"|format(success_data.amount) }}</div>
+                </div>
+                
+                <!-- Recipient Section -->
+                <div class="detail-section recipient-section">
+                    <div class="detail-label">Recipient</div>
+                    <div class="recipient-info">
+                        <div class="recipient-avatar">
+                            {{ success_data.receiver_identifier|first|upper }}
+                        </div>
+                        <div class="recipient-details">
+                            <div class="recipient-name">
+                                {% if success_data.receiver_found and success_data.receiver_username %}
+                                    {{ success_data.receiver_username }}
+                                {% else %}
+                                    {{ success_data.receiver_identifier }}
+                                {% endif %}
+                            </div>
+                            <div class="recipient-method">
+                                <i class="fas fa-{{ 'qrcode' if success_data.payment_method == 'upi' else 'mobile-alt' if success_data.payment_method == 'mobile' else 'user-friends' if success_data.payment_method == 'contact' else 'university' }}"></i>
+                                {{ success_data.payment_method|title }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- QR Scan Details (if via QR) -->
+                {% if success_data.via_qr %}
+                <div class="detail-section qr-scan-details">
+                    <div class="detail-label">
+                        <i class="fas fa-qrcode"></i>
+                        QR Payment Details
+                    </div>
+                    <div class="qr-scan-info">
+                        <div class="qr-scan-method">
+                            <i class="fas fa-camera"></i>
+                            <span>Paid via QR Scan</span>
+                        </div>
+                        <div class="qr-verified">
+                            <i class="fas fa-shield-check"></i>
+                            <span>QR validated and verified</span>
+                        </div>
+                        {% if success_data.receiver_found %}
+                        <div class="qr-match">
+                            <i class="fas fa-user-check"></i>
+                            <span>Recipient verified in EasyCash</span>
+                        </div>
+                        {% else %}
+                        <div class="qr-external">
+                            <i class="fas fa-external-link-alt"></i>
+                            <span>External UPI transfer via QR</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Transaction ID -->
+                <div class="detail-section id-section">
+                    <div class="detail-label">Transaction ID</div>
+                    <div class="transaction-id-container">
+                        <code class="transaction-id" id="transactionId">{{ success_data.transaction_id }}</code>
+                        <button class="btn-copy" onclick="copyTransactionId()" title="Copy Transaction ID">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Date & Time -->
+                <div class="detail-section datetime-section">
+                    <div class="detail-label">Date & Time</div>
+                    <div class="detail-value">
+                        <i class="far fa-calendar"></i>
+                        {{ now().strftime('%d %b %Y') }}
+                        <span class="time">• {{ now().strftime('%I:%M %p') }}</span>
+                    </div>
+                </div>
+                
+                <!-- Balance Update -->
+                <div class="detail-section balance-section">
+                    <div class="detail-label">Balance Updated</div>
+                    <div class="balance-update">
+                        <div class="balance-before">
+                            <span class="label">Before:</span>
+                            <span class="value">₹{{ "%.2f"|format(user.balance + success_data.amount) }}</span>
+                        </div>
+                        <div class="balance-arrow">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="balance-after">
+                            <span class="label">After:</span>
+                            <span class="value">₹{{ "%.2f"|format(user.balance) }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Status Timeline -->
+                <div class="detail-section timeline-section">
+                    <div class="detail-label">Payment Status</div>
+                    <div class="timeline">
+                        <div class="timeline-step completed">
+                            <div class="step-icon">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="step-content">
+                                <div class="step-title">Initiated</div>
+                                <div class="step-time">{{ (now() - timedelta(minutes=2)).strftime('%I:%M %p') }}</div>
+                            </div>
+                        </div>
+                        <div class="timeline-step completed">
+                            <div class="step-icon">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="step-content">
+                                <div class="step-title">Verified</div>
+                                <div class="step-time">{{ (now() - timedelta(minutes=1)).strftime('%I:%M %p') }}</div>
+                            </div>
+                        </div>
+                        <div class="timeline-step completed current">
+                            <div class="step-icon">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="step-content">
+                                <div class="step-title">Completed</div>
+                                <div class="step-time">{{ now().strftime('%I:%M %p') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if success_data.payment_method == 'upi' %}
+                <!-- UPI Specific Info -->
+                <div class="detail-section upi-section">
+                    <div class="detail-label">UPI Details</div>
+                    <div class="upi-info">
+                        <div class="upi-id-display">
+                            <i class="fas fa-qrcode"></i>
+                            <span>{{ success_data.receiver_identifier }}</span>
+                            <button class="btn-copy" onclick="copyUPI('{{ success_data.receiver_identifier }}')" title="Copy UPI ID">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        {% if success_data.receiver_found %}
+                        <div class="upi-status success">
+                            <i class="fas fa-user-check"></i>
+                            <span>Registered EasyCash user • Instant transfer</span>
+                        </div>
+                        {% else %}
+                        <div class="upi-status warning">
+                            <i class="fas fa-info-circle"></i>
+                            <span>External UPI ID • Processed via UPI network</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Share Receipt Section -->
+        <div class="share-section">
+            <div class="share-header">
+                <h3><i class="fas fa-share-alt"></i> Share Receipt</h3>
+                <button class="btn-text" id="toggleShareButton">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            
+            <div class="share-options" id="shareOptions" style="display: none;">
+                <div class="share-buttons">
+                    <button class="share-btn whatsapp" id="shareWhatsApp">
+                        <div class="share-icon">
+                            <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <span>WhatsApp</span>
+                    </button>
+                    <button class="share-btn message" id="shareMessage">
+                        <div class="share-icon">
+                            <i class="fas fa-sms"></i>
+                        </div>
+                        <span>Message</span>
+                    </button>
+                    <button class="share-btn copy" id="copyLink">
+                        <div class="share-icon">
+                            <i class="fas fa-link"></i>
+                        </div>
+                        <span>Copy Link</span>
+                    </button>
+                    <button class="share-btn download" id="downloadReceipt">
+                        <div class="share-icon">
+                            <i class="fas fa-download"></i>
+                        </div>
+                        <span>Download</span>
+                    </button>
+                </div>
+                
+                <div class="share-textarea-container">
+                    <textarea class="share-textarea" id="shareTextarea" readonly rows="3"></textarea>
+                    <div class="url-preview" id="urlPreview" style="display: none; margin-top: 10px; padding: 10px; background: rgba(var(--primary-rgb), 0.1); border-radius: 8px; border: 1px solid var(--primary-color); font-size: 14px;">
+                        <span style="color: var(--dark-text-secondary);">Clickable link: </span>
+                        <a href="#" id="clickableLink" target="_blank" style="color: var(--primary-color); text-decoration: none; word-break: break-all;"></a>
+                    </div>
+                    <button class="btn-copy-text" id="copyShareText">
+                        <i class="fas fa-copy"></i> Copy Text
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+            <div class="action-grid">
+                <a href="{{ url_for('dashboard') }}" class="action-item">
+                    <div class="action-icon">
+                        <i class="fas fa-home"></i>
+                    </div>
+                    <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('transactions') }}" class="action-item">
+                    <div class="action-icon">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <span>Transactions</span>
+                </a>
+                <a href="{{ url_for('send_money') }}" class="action-item">
+                    <div class="action-icon">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                    <span>Send Again</span>
+                </a>
+                    <div class="action-icon">
+                        <i class="fas fa-qr-code"></i>
+                    </div>
+                    <span>Receive Money</span>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Support & Help -->
+        <div class="support-section">
+            <div class="support-header">
+                <h3><i class="fas fa-life-ring"></i> Need Help?</h3>
+            </div>
+            <div class="support-options">
+                <div class="support-item">
+                    <i class="fas fa-question-circle"></i>
+                    <div class="support-content">
+                        <h4>Payment Issues?</h4>
+                        <p>If recipient didn't receive money</p>
+                        <a href="#support" class="btn-text">Contact Support</a>
+                    </div>
+                </div>
+                <div class="support-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <div class="support-content">
+                        <h4>Security Concern?</h4>
+                        <p>Report suspicious activity</p>
+                        <a href="#report" class="btn-text">Report Issue</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Receipt Footer -->
+        <div class="receipt-footer">
+            <div class="footer-logo">
+                <i class="fas fa-wallet"></i>
+                <span>EasyCash</span>
+            </div>
+            <div class="footer-info">
+                <p>Transaction ID: {{ success_data.transaction_id }}</p>
+                <p>Generated on: {{ now().strftime('%d %B, %Y at %I:%M %p') }}</p>
+                <p class="security-note">
+                    <i class="fas fa-lock"></i>
+                    This receipt is secured with 256-bit encryption
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confetti Effect -->
+<div class="confetti-container"></div>
+
+<style>
+/* Success Page Styles */
+.success-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    animation: fadeIn 0.5s ease;
+}
+
+.success-card {
+    background: var(--dark-surface);
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.6s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.success-icon {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #27ae60, #219653);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    margin: 0 auto 25px;
+    animation: bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 0 10px 30px rgba(39, 174, 96, 0.3);
+}
+
+@keyframes bounceIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+    70% {
+        transform: scale(0.9);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.success-card h2 {
+    margin: 0 0 10px 0;
+    color: var(--dark-text);
+    font-size: 32px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.success-subtitle {
+    color: var(--dark-text-secondary);
+    text-align: center;
+    font-size: 18px;
+    margin-bottom: 40px;
+    line-height: 1.6;
+}
+
+/* Transaction Details Card */
+.transaction-details-card {
+    background: var(--dark-surface-light);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color);
+    animation: slideUp 0.6s ease 0.2s both;
+}
+
+.details-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.details-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    color: var(--dark-text);
+}
+
+.badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-success {
+    background: linear-gradient(135deg, #27ae60, #219653);
+    color: white;
+    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.2);
+}
+
+.details-body {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.detail-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.detail-label {
+    font-size: 14px;
+    color: var(--dark-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.detail-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--dark-text);
+}
+
+.amount-positive {
+    color: var(--success-color);
+    font-size: 32px;
+}
+
+/* QR Scan Details */
+.qr-scan-details {
+    background: rgba(var(--primary-rgb), 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid rgba(var(--primary-rgb), 0.3);
+}
+
+.qr-scan-details .detail-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+}
+
+.qr-scan-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.qr-scan-method,
+.qr-verified,
+.qr-match,
+.qr-external {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 15px;
+    background: var(--dark-surface);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.qr-scan-method i {
+    color: var(--primary-color);
+}
+
+.qr-verified i {
+    color: var(--success-color);
+}
+
+.qr-match i {
+    color: var(--success-color);
+}
+
+.qr-external i {
+    color: var(--warning-color);
+}
+
+/* Recipient Section */
+.recipient-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.recipient-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.recipient-details {
+    flex: 1;
+}
+
+.recipient-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--dark-text);
+    margin-bottom: 8px;
+}
+
+.recipient-method {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--dark-text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px 16px;
+    border-radius: 20px;
+    display: inline-flex;
+}
+
+/* Transaction ID */
+.transaction-id-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.transaction-id {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    color: var(--dark-text-secondary);
+    word-break: break-all;
+    flex: 1;
+}
+
+.btn-copy {
+    background: transparent;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.btn-copy:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Date & Time */
+.datetime-section .detail-value {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+}
+
+.datetime-section .time {
+    color: var(--dark-text-secondary);
+    font-weight: 500;
+}
+
+/* Balance Update */
+.balance-update {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.balance-before, .balance-after {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    text-align: center;
+    flex: 1;
+}
+
+.balance-before .label, .balance-after .label {
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.balance-before .value {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--danger-color);
+}
+
+.balance-after .value {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--success-color);
+}
+
+.balance-arrow {
+    color: var(--primary-color);
+    font-size: 20px;
+    animation: arrowPulse 2s infinite;
+}
+
+@keyframes arrowPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+/* Timeline */
+.timeline {
+    position: relative;
+    padding-left: 40px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--dark-surface-lighter);
+    z-index: 1;
+}
+
+.timeline-step {
+    position: relative;
+    margin-bottom: 30px;
+    z-index: 2;
+}
+
+.timeline-step:last-child {
+    margin-bottom: 0;
+}
+
+.timeline-step.completed::before {
+    background: var(--success-color);
+}
+
+.timeline-step.current::before {
+    background: var(--success-color);
+    animation: pulse 2s infinite;
+}
+
+.timeline-step .step-icon {
+    position: absolute;
+    left: -40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--dark-surface);
+    border: 2px solid var(--dark-surface-lighter);
+    z-index: 2;
+}
+
+.timeline-step.completed .step-icon {
+    background: var(--success-color);
+    border-color: var(--success-color);
+    color: white;
+}
+
+.timeline-step.current .step-icon {
+    background: var(--success-color);
+    border-color: var(--success-color);
+    color: white;
+    box-shadow: 0 0 0 8px rgba(39, 174, 96, 0.2);
+}
+
+.step-content {
+    padding: 10px 0;
+}
+
+.step-title {
+    font-weight: 600;
+    color: var(--dark-text);
+    margin-bottom: 5px;
+    font-size: 16px;
+}
+
+.step-time {
+    font-size: 14px;
+    color: var(--dark-text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 5px 10px;
+    border-radius: 12px;
+    display: inline-block;
+}
+
+/* UPI Section */
+.upi-info {
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.upi-id-display {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    border: 1px solid var(--primary-color);
+}
+
+.upi-id-display i {
+    color: var(--primary-color);
+    font-size: 20px;
+}
+
+.upi-id-display span {
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    color: var(--dark-text);
+    flex: 1;
+    word-break: break-all;
+}
+
+.upi-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+}
+
+.upi-status.success {
+    background: rgba(39, 174, 96, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.upi-status.warning {
+    background: rgba(241, 196, 15, 0.1);
+    color: var(--warning-color);
+    border: 1px solid rgba(241, 196, 15, 0.3);
+}
+
+/* Share Section */
+.share-section {
+    background: var(--dark-surface-light);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 30px;
+    animation: slideUp 0.6s ease 0.4s both;
+}
+
+.share-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    cursor: pointer;
+}
+
+.share-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    color: var(--dark-text);
+}
+
+.share-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.share-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 10px;
+    background: var(--dark-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    color: var(--dark-text);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.share-btn:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow);
+}
+
+.share-btn.whatsapp:hover {
+    background: #25D366;
+    color: white;
+    border-color: #25D366;
+}
+
+.share-btn.message:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.share-btn.copy:hover {
+    background: var(--warning-color);
+    color: white;
+    border-color: var(--warning-color);
+}
+
+.share-btn.download:hover {
+    background: var(--success-color);
+    color: white;
+    border-color: var(--success-color);
+}
+
+.share-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.share-btn span {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.share-textarea-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.share-textarea {
+    width: 100%;
+    padding: 20px;
+    background: var(--dark-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--dark-text);
+    font-family: inherit;
+    font-size: 14px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+.share-textarea:focus {
+    border-color: var(--primary-color);
+}
+
+.btn-copy-text {
+    align-self: flex-end;
+    padding: 12px 24px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-copy-text:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+/* URL Preview */
+.url-preview {
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(var(--primary-rgb), 0.1);
+    border-radius: 8px;
+    border: 1px solid var(--primary-color);
+    font-size: 14px;
+}
+
+.url-preview a {
+    color: var(--primary-color);
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.url-preview a:hover {
+    text-decoration: underline;
+}
+
+/* Quick Actions */
+.quick-actions {
+    margin-bottom: 30px;
+    animation: slideUp 0.6s ease 0.6s both;
+}
+
+.quick-actions h3 {
+    margin: 0 0 25px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    color: var(--dark-text);
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+}
+
+.action-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 10px;
+    background: var(--dark-surface-light);
+    border-radius: 16px;
+    color: var(--dark-text);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.action-item:hover {
+    background: var(--dark-surface-lighter);
+    transform: translateY(-5px);
+    box-shadow: var(--shadow);
+}
+
+.action-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary-color);
+}
+
+.action-item span {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Support Section */
+.support-section {
+    background: var(--dark-surface-light);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 30px;
+    animation: slideUp 0.6s ease 0.8s both;
+}
+
+.support-header {
+    margin-bottom: 25px;
+}
+
+.support-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    color: var(--dark-text);
+}
+
+.support-options {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.support-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 25px;
+    background: var(--dark-surface);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.support-item:hover {
+    border-color: var(--primary-color);
+    transform: translateX(5px);
+}
+
+.support-item i {
+    font-size: 24px;
+    color: var(--primary-color);
+    margin-top: 5px;
+    flex-shrink: 0;
+}
+
+.support-content {
+    flex: 1;
+}
+
+.support-content h4 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    color: var(--dark-text);
+}
+
+.support-content p {
+    margin: 0 0 15px 0;
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.support-content .btn-text {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.support-content .btn-text:hover {
+    gap: 12px;
+}
+
+/* Receipt Footer */
+.receipt-footer {
+    text-align: center;
+    padding: 30px 0 0;
+    border-top: 1px solid var(--border-color);
+    animation: slideUp 0.6s ease 1s both;
+}
+
+.footer-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+
+.footer-info {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+.footer-info p {
+    margin: 5px 0;
+}
+
+.security-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(var(--primary-rgb), 0.1);
+    border-radius: 12px;
+    color: var(--primary-color);
+}
+
+/* Confetti */
+.confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: var(--primary-color);
+    animation: confettiFall 5s linear forwards;
+}
+
+@keyframes confettiFall {
+    0% {
+        transform: translateY(-100px) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 15px rgba(39, 174, 96, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(39, 174, 96, 0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .success-card {
+        padding: 25px;
+    }
+    
+    .share-buttons,
+    .action-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .balance-update {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .timeline {
+        padding-left: 30px;
+    }
+    
+    .timeline-step .step-icon {
+        left: -30px;
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .success-container {
+        padding: 10px;
+    }
+    
+    .success-card {
+        padding: 20px;
+    }
+    
+    .success-icon {
+        width: 80px;
+        height: 80px;
+        font-size: 36px;
+    }
+    
+    .success-card h2 {
+        font-size: 24px;
+    }
+    
+    .details-body {
+        gap: 20px;
+    }
+    
+    .recipient-info {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .transaction-id-container {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+        gap: 10px;
+    }
+    
+    .btn-copy {
+        align-self: center;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .success-container {
+        max-width: 100%;
+        padding: 0;
+    }
+    
+    .success-card {
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+    
+    .share-section,
+    .quick-actions,
+    .support-section {
+        display: none;
+    }
+    
+    .receipt-footer {
+        margin-top: 50px;
+    }
+}
+
+/* Dark Mode Adjustments */
+@media (prefers-color-scheme: light) {
+    .transaction-details-card,
+    .share-section,
+    .support-section,
+    .quick-actions .action-item {
+        background: #f8f9fa;
+    }
+    
+    .recipient-info,
+    .balance-update,
+    .upi-info,
+    .qr-scan-details {
+        background: rgba(0, 0, 0, 0.02);
+        border-color: #dee2e6;
+    }
+}
+</style>
+
+<script>
+// Success Page JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    // Create confetti effect
+    createConfetti();
+    
+    // Generate share text
+    generateShareText();
+    
+    // Set up event listeners
+    setupEventListeners();
+    
+    // Play success sound if available
+    celebrateSuccess();
+});
+
+function createConfetti() {
+    const colors = [
+        '#3498db', '#2ecc71', '#e74c3c', '#f1c40f',
+        '#9b59b6', '#1abc9c', '#e67e22', '#34495e'
+    ];
+    
+    const container = document.querySelector('.confetti-container');
+    if (!container) return;
+    
+    for (let i = 0; i < 150; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.animationDelay = Math.random() * 2 + 's';
+        confetti.style.width = Math.random() * 10 + 5 + 'px';
+        confetti.style.height = Math.random() * 10 + 5 + 'px';
+        container.appendChild(confetti);
+        
+        // Remove after animation
+        setTimeout(() => {
+            if (confetti.parentNode) {
+                confetti.remove();
+            }
+        }, 5000);
+    }
+}
+
+function getReceiptUrl() {
+    // Auto-detect environment
+    const isPythonAnywhere = window.location.hostname.includes('pythonanywhere.com');
+    const isLocalhost = window.location.hostname.includes('localhost') || window.location.hostname === '127.0.0.1';
+    
+    if (isPythonAnywhere) {
+        return 'https://atm01.pythonanywhere.com/shared/receipt/{{ success_data.transaction_id }}';
+    } else if (isLocalhost) {
+        return `${window.location.origin}/shared/receipt/{{ success_data.transaction_id }}`;
+    } else {
+        // For other deployments
+        return `${window.location.origin}/shared/receipt/{{ success_data.transaction_id }}`;
+    }
+}
+
+function generateShareText() {
+    const textarea = document.getElementById('shareTextarea');
+    if (!textarea) return;
+    
+    const transactionData = {
+        amount: {{ success_data.amount }},
+        recipient: '{{ success_data.receiver_identifier }}',
+        recipientName: '{{ success_data.receiver_username if success_data.receiver_found and success_data.receiver_username else success_data.receiver_identifier }}',
+        method: '{{ success_data.payment_method|title }}',
+        transactionId: '{{ success_data.transaction_id }}',
+        date: '{{ now().strftime("%d %b %Y") }}',
+        time: '{{ now().strftime("%I:%M %p") }}'
+    };
+    
+    // Get the receipt URL
+    const receiptUrl = getReceiptUrl();
+    
+    // Create WhatsApp-friendly message with clickable link
+    let message = `✅ *EasyCash Payment Receipt* ✅\n\n`;
+    message += `💰 *Amount:* ₹${transactionData.amount.toFixed(2)}\n`;
+    message += `👤 *To:* ${transactionData.recipientName}\n`;
+    message += `📱 *Via:* ${transactionData.method}\n`;
+    
+    {% if success_data.via_qr %}
+    message += `📷 *Payment Method:* QR Code Scan\n`;
+    {% endif %}
+    
+    message += `📋 *Transaction ID:* ${transactionData.transactionId}\n`;
+    message += `📅 *Date:* ${transactionData.date} at ${transactionData.time}\n\n`;
+    message += `🔗 *View Receipt:*\n`;
+    message += `${receiptUrl}\n\n`;
+    message += `_Powered by EasyCash - Secure Digital Wallet_`;
+    
+    textarea.value = message;
+    
+    // Show clickable link preview
+    const urlPreview = document.getElementById('urlPreview');
+    const clickableLink = document.getElementById('clickableLink');
+    
+    if (urlPreview && clickableLink) {
+        urlPreview.style.display = 'block';
+        clickableLink.href = receiptUrl;
+        clickableLink.textContent = receiptUrl;
+    }
+    
+    // Store the receipt URL globally for use in share functions
+    window.receiptUrl = receiptUrl;
+}
+
+function setupEventListeners() {
+    // Toggle share options
+    const toggleShareButton = document.getElementById('toggleShareButton');
+    if (toggleShareButton) {
+        toggleShareButton.addEventListener('click', toggleShareOptions);
+    }
+    
+    // Share via WhatsApp
+    const shareWhatsApp = document.getElementById('shareWhatsApp');
+    if (shareWhatsApp) {
+        shareWhatsApp.addEventListener('click', shareViaWhatsApp);
+    }
+    
+    // Share via Message
+    const shareMessage = document.getElementById('shareMessage');
+    if (shareMessage) {
+        shareMessage.addEventListener('click', shareViaMessage);
+    }
+    
+    // Copy receipt link
+    const copyLink = document.getElementById('copyLink');
+    if (copyLink) {
+        copyLink.addEventListener('click', copyReceiptLink);
+    }
+    
+    // Download receipt
+    const downloadReceiptBtn = document.getElementById('downloadReceipt');
+    if (downloadReceiptBtn) {
+        downloadReceiptBtn.addEventListener('click', downloadReceipt);
+    }
+    
+    // Copy share text
+    const copyShareTextBtn = document.getElementById('copyShareText');
+    if (copyShareTextBtn) {
+        copyShareTextBtn.addEventListener('click', copyShareText);
+    }
+    
+    // Copy transaction ID button
+    const copyTransactionIdBtn = document.querySelector('[onclick="copyTransactionId()"]');
+    if (copyTransactionIdBtn) {
+        // Remove inline onclick and add event listener
+        copyTransactionIdBtn.removeAttribute('onclick');
+        copyTransactionIdBtn.addEventListener('click', function() {
+            copyText('{{ success_data.transaction_id }}', 'Transaction ID copied!');
+        });
+    }
+    
+    // Copy UPI ID button
+    const copyUPIBtn = document.querySelector('[onclick^="copyUPI"]');
+    if (copyUPIBtn) {
+        // Extract UPI ID from onclick attribute
+        const onclickAttr = copyUPIBtn.getAttribute('onclick');
+        const upiIdMatch = onclickAttr.match(/copyUPI\('([^']+)'\)/);
+        if (upiIdMatch) {
+            const upiId = upiIdMatch[1];
+            copyUPIBtn.removeAttribute('onclick');
+            copyUPIBtn.addEventListener('click', function() {
+                copyText(upiId, 'UPI ID copied!');
+            });
+        }
+    }
+}
+
+async function copyText(text, successMessage) {
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+            showToast(successMessage, 'success');
+        } else {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.select();
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            if (successful) {
+                showToast(successMessage, 'success');
+            } else {
+                showToast('Failed to copy text', 'error');
+            }
+        }
+    } catch (err) {
+        console.error('Failed to copy:', err);
+        showToast('Failed to copy text', 'error');
+    }
+}
+
+function shareViaWhatsApp() {
+    const textarea = document.getElementById('shareTextarea');
+    if (!textarea) return;
+    
+    // Use the globally stored receipt URL
+    const receiptUrl = window.receiptUrl || getReceiptUrl();
+    
+    // Create a WhatsApp-friendly message with clickable link formatting
+    // WhatsApp requires the URL to be on its own line to be clickable
+    const whatsappMessage = `✅ *EasyCash Payment Receipt* ✅\n\n` +
+        `💰 *Amount:* ₹{{ "%.2f"|format(success_data.amount) }}\n` +
+        `👤 *To:* {{ success_data.receiver_identifier }}\n` +
+        `📋 *Transaction ID:* {{ success_data.transaction_id }}\n\n` +
+        `🔗 *View Receipt:*\n` +
+        `${receiptUrl}\n\n` +
+        `_Powered by EasyCash - Secure Digital Wallet_`;
+    
+    // Encode for WhatsApp
+    const encodedMessage = encodeURIComponent(whatsappMessage);
+    
+    // Create WhatsApp URL
+    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+    
+    // Check if mobile device
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+        // Try to open WhatsApp app first
+        const appUrl = `whatsapp://send?text=${encodedMessage}`;
+        
+        // Open app URL
+        window.location.href = appUrl;
+        
+        // Fallback to web after a delay if app doesn't open
+        setTimeout(() => {
+            // Check if we're still on the same page (app didn't take over)
+            if (!document.hidden) {
+                window.open(whatsappUrl, '_blank');
+            }
+        }, 1000);
+    } else {
+        // Desktop - open web WhatsApp
+        window.open(whatsappUrl, '_blank', 'width=600,height=700');
+    }
+}
+
+function shareViaMessage() {
+    const textarea = document.getElementById('shareTextarea');
+    if (!textarea) return;
+    
+    const message = textarea.value;
+    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        // Mobile devices
+        const url = `sms:?body=${encodeURIComponent(message)}`;
+        window.location.href = url;
+    } else {
+        // Desktop - just copy to clipboard
+        copyText(message, 'Message text copied to clipboard!');
+    }
+}
+
+function copyReceiptLink() {
+    const link = getReceiptUrl();
+    copyText(link, 'Receipt link copied!');
+}
+
+function downloadReceipt() {
+    // Create a printable version
+    const printContent = document.querySelector('.success-card').cloneNode(true);
+    
+    // Remove interactive elements
+    const interactiveElements = printContent.querySelectorAll('button, .share-section, .quick-actions, .support-section, .confetti-container');
+    interactiveElements.forEach(el => el.remove());
+    
+    // Open print dialog
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>EasyCash Receipt - {{ success_data.transaction_id }}</title>
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        padding: 20px; 
+                        background: white;
+                        color: black;
+                    }
+                    .receipt { 
+                        max-width: 500px; 
+                        margin: 0 auto; 
+                        background: white;
+                        color: black;
+                    }
+                    .success-icon { 
+                        color: #27ae60; 
+                        font-size: 48px; 
+                        text-align: center;
+                        margin: 20px 0;
+                    }
+                    h2 { 
+                        text-align: center; 
+                        color: #27ae60;
+                    }
+                    .transaction-details-card {
+                        border: 1px solid #ddd;
+                        border-radius: 10px;
+                        padding: 20px;
+                        margin: 20px 0;
+                    }
+                    .detail-section {
+                        margin: 15px 0;
+                        padding-bottom: 15px;
+                        border-bottom: 1px solid #eee;
+                    }
+                    .detail-section:last-child {
+                        border-bottom: none;
+                    }
+                    .detail-label {
+                        color: #666;
+                        font-size: 12px;
+                        text-transform: uppercase;
+                        margin-bottom: 5px;
+                    }
+                    .detail-value {
+                        font-weight: bold;
+                        font-size: 16px;
+                    }
+                    .receipt-footer {
+                        margin-top: 30px;
+                        text-align: center;
+                        font-size: 12px;
+                        color: #666;
+                        border-top: 1px solid #ddd;
+                        padding-top: 20px;
+                    }
+                    @media print {
+                        body { padding: 0; }
+                        .receipt { max-width: 100%; }
+                    }
+                </style>
+            </head>
+            <body onload="window.print(); window.close();">
+                <div class="receipt">
+                    ${printContent.innerHTML}
+                </div>
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+}
+
+function copyShareText() {
+    const textarea = document.getElementById('shareTextarea');
+    if (textarea) {
+        copyText(textarea.value, 'Receipt text copied!');
+    }
+}
+
+function toggleShareOptions() {
+    const shareOptions = document.getElementById('shareOptions');
+    const chevron = document.querySelector('#toggleShareButton i');
+    
+    if (shareOptions.style.display === 'none' || !shareOptions.style.display) {
+        shareOptions.style.display = 'block';
+        chevron.className = 'fas fa-chevron-up';
+        animateShareOptions();
+    } else {
+        shareOptions.style.display = 'none';
+        chevron.className = 'fas fa-chevron-down';
+    }
+}
+
+function animateShareOptions() {
+    const shareOptions = document.getElementById('shareOptions');
+    shareOptions.style.opacity = '0';
+    shareOptions.style.transform = 'translateY(-10px)';
+    
+    setTimeout(() => {
+        shareOptions.style.transition = 'all 0.3s ease';
+        shareOptions.style.opacity = '1';
+        shareOptions.style.transform = 'translateY(0)';
+    }, 10);
+}
+
+function celebrateSuccess() {
+    // Vibration (if supported)
+    if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+    }
+    
+    // Show celebration message
+    setTimeout(() => {
+        showToast('🎉 Payment completed successfully!', 'success');
+    }, 1000);
+}
+
+function showToast(message, type = 'info') {
+    // Remove existing toast
+    const existingToast = document.querySelector('.toast-notification');
+    if (existingToast) {
+        existingToast.remove();
+    }
+    
+    // Create toast
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    // Show toast
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+    
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Add CSS for toast if not exists
+if (!document.querySelector('#toast-styles')) {
+    const style = document.createElement('style');
+    style.id = 'toast-styles';
+    style.textContent = `
+        .toast-notification {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--dark-surface);
+            color: var(--dark-text);
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 9999;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            max-width: 90%;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+        }
+        
+        .toast-notification.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .toast-notification.success {
+            background: linear-gradient(135deg, #27ae60, #219653);
+            color: white;
+            border-color: rgba(39, 174, 96, 0.3);
+        }
+        
+        .toast-notification.error {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border-color: rgba(231, 76, 60, 0.3);
+        }
+        
+        .toast-notification.info {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border-color: rgba(52, 152, 219, 0.3);
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Auto-scroll to top
+window.scrollTo({ top: 0, behavior: 'smooth' });
+
+// Set page title
+document.title = `Payment Successful - EasyCash`;
+</script>
+{% endblock %}

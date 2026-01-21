@@ -1,0 +1,2904 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}EasyCash - Digital Wallet{% endblock %}</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/icon-192x192.svg') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.svg') }}">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+          integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" 
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1a73e8">
+    <meta name="description" content="EasyCash - ATM-style digital wallet application">
+    <meta name="application-name" content="EasyCash">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="EasyCash">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-TileColor" content="#1a73e8">
+    <meta name="msapplication-TileImage" content="{{ url_for('static', filename='icons/icon-144x144.svg') }}">
+    <meta name="msapplication-config" content="none">
+    
+    <!-- iOS Splash Screen (simplified) -->
+    <link rel="apple-touch-startup-image" 
+          href="{{ url_for('static', filename='icons/icon-512x512.svg') }}">
+    
+    <!-- QR Scan Styles -->
+    <style>
+    /* QR Scan Button in Bottom Nav */
+    .bottom-nav {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--dark-surface);
+        border-top: 1px solid var(--border-color);
+        padding: 10px 0;
+        z-index: 1000;
+        height: 70px;
+    }
+
+    .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: var(--dark-text-secondary);
+        transition: var(--transition);
+        flex: 1;
+        height: 100%;
+        position: relative;
+    }
+
+    .nav-item i {
+        font-size: 20px;
+        margin-bottom: 5px;
+    }
+
+    .nav-item span {
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .nav-item.active {
+        color: var(--primary-color);
+    }
+
+    .nav-item:hover {
+        color: var(--primary-color);
+    }
+
+    /* Special QR Scan Trigger Button */
+    .qr-scan-trigger {
+        cursor: pointer;
+        position: relative;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white !important;
+        border-radius: 50%;
+        width: 70px !important;
+        height: 70px !important;
+        margin-top: -35px !important;
+        box-shadow: var(--shadow-lg);
+        flex: 0 0 auto !important;
+        border: 4px solid var(--dark-surface);
+        z-index: 1001;
+    }
+
+    .qr-scan-trigger i {
+        font-size: 24px !important;
+        margin-bottom: 0 !important;
+    }
+
+    .qr-scan-trigger span {
+        position: absolute;
+        bottom: -25px;
+        font-size: 11px;
+        white-space: nowrap;
+        background: var(--dark-surface);
+        padding: 2px 8px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        color: var(--dark-text) !important;
+    }
+
+    .qr-scan-trigger:hover {
+        transform: scale(1.1) !important;
+        box-shadow: 0 10px 30px rgba(var(--primary-rgb), 0.4) !important;
+    }
+
+    .qr-scan-trigger:active {
+        transform: scale(0.95) !important;
+    }
+
+    /* Scan Button Animation */
+    .qr-scan-trigger.scanning {
+        animation: pulse 1.5s ease-in-out infinite;
+        background: linear-gradient(135deg, #FF5722, #FF9800) !important;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(255, 87, 34, 0.7);
+        }
+        50% {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 10px rgba(255, 87, 34, 0);
+        }
+    }
+
+    /* Scanner Overlay Animation */
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .scanner-overlay.show {
+        display: flex !important;
+        animation: slideUp 0.3s ease-out;
+    }
+
+    /* Fullscreen Scanner Overlay */
+    .scanner-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: black;
+        z-index: 3000;
+        display: none;
+        flex-direction: column;
+    }
+
+    .scanner-header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 10;
+    }
+
+    .scanner-header h3 {
+        color: white;
+        margin: 0;
+        font-size: 18px;
+    }
+
+    .scanner-close {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .scanner-close:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .scanner-preview {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+        background: #000;
+    }
+
+    #cameraVideo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Responsive Scanner Guide */
+    .scanner-guide {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 70vw;
+        max-width: 300px;
+        height: 70vw;
+        max-height: 300px;
+        border: 2px solid rgba(255, 255, 255, 0.8);
+        border-radius: 20px;
+        pointer-events: none;
+        z-index: 5;
+        box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.7);
+        animation: guidePulse 2s infinite;
+    }
+
+    @keyframes guidePulse {
+        0%, 100% {
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+        50% {
+            border-color: var(--primary-color);
+        }
+    }
+
+    .scanner-controls {
+        position: absolute;
+        bottom: 40px;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        z-index: 10;
+    }
+
+    .scanner-control-btn {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 24px;
+        backdrop-filter: blur(10px);
+    }
+
+    .scanner-control-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+    }
+
+    .scanner-control-btn.active {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .scanner-control-btn.warning {
+        background: rgba(255, 152, 0, 0.8);
+        border-color: rgba(255, 152, 0, 0.8);
+    }
+
+    .scanner-control-btn.warning.active {
+        background: #FF9800;
+        border-color: #FF9800;
+        box-shadow: 0 0 20px rgba(255, 152, 0, 0.5);
+    }
+
+    .scanner-loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: white;
+        z-index: 1;
+    }
+
+    .scanner-loading .spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-top-color: var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Camera Fallback */
+    .camera-fallback {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: white;
+        text-align: center;
+        padding: 20px;
+        background: #000;
+    }
+
+    .camera-fallback i {
+        font-size: 80px;
+        color: #666;
+        margin-bottom: 20px;
+    }
+
+    .camera-fallback h3 {
+        margin: 0 0 10px 0;
+        font-size: 24px;
+    }
+
+    .camera-fallback p {
+        color: #aaa;
+        margin: 0 0 20px 0;
+        max-width: 500px;
+    }
+
+    /* Gallery Upload Overlay */
+    .gallery-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--dark-bg);
+        z-index: 3000;
+        display: none;
+        flex-direction: column;
+    }
+
+    .gallery-header {
+        padding: 20px;
+        background: var(--dark-surface);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .gallery-header h3 {
+        color: var(--dark-text);
+        margin: 0;
+        font-size: 18px;
+    }
+
+    .gallery-content {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+    .file-upload-card {
+        background: var(--dark-surface);
+        border-radius: var(--border-radius);
+        padding: 60px 20px;
+        text-align: center;
+        border: 2px dashed var(--border-color);
+        cursor: pointer;
+        transition: var(--transition);
+        margin-bottom: 20px;
+    }
+
+    .file-upload-card:hover {
+        border-color: var(--primary-color);
+        background: rgba(var(--primary-rgb), 0.05);
+    }
+
+    .file-upload-card i {
+        font-size: 64px;
+        color: var(--primary-color);
+        margin-bottom: 20px;
+    }
+
+    .file-upload-card h4 {
+        margin: 0 0 10px 0;
+        color: var(--dark-text);
+    }
+
+    .file-upload-card p {
+        color: var(--dark-text-secondary);
+        margin: 0;
+    }
+
+    .file-preview {
+        margin-top: 20px;
+        display: none;
+    }
+
+    .file-preview img {
+        max-width: 100%;
+        max-height: 300px;
+        border-radius: var(--border-radius);
+        margin-bottom: 20px;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .btn-block {
+        display: block;
+        width: 100%;
+        padding: 15px;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: var(--border-radius);
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition);
+        text-align: center;
+        margin-top: 20px;
+    }
+
+    .btn-block:hover {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+    }
+
+    .btn-block:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+
+    .file-types {
+        font-size: 12px;
+        color: var(--dark-text-secondary);
+        margin-top: 10px;
+    }
+
+    /* QR Result Modal */
+    .qr-result-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 4000;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+
+    .qr-result-content {
+        background: var(--dark-surface);
+        border-radius: var(--border-radius);
+        padding: 30px;
+        width: 100%;
+        max-width: 400px;
+        box-shadow: var(--shadow-lg);
+        animation: modalSlideUp 0.3s ease;
+    }
+
+    .qr-result-header {
+        text-align: center;
+        margin-bottom: 25px;
+    }
+
+    .qr-result-header i {
+        font-size: 48px;
+        color: var(--success-color);
+        margin-bottom: 15px;
+    }
+
+    .qr-result-header h3 {
+        margin: 0 0 10px 0;
+        color: var(--dark-text);
+        font-size: 20px;
+    }
+
+    .qr-result-header p {
+        color: var(--dark-text-secondary);
+        margin: 0;
+    }
+
+    .qr-result-details {
+        background: var(--dark-surface-light);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+
+    .qr-detail-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .qr-detail-item:last-child {
+        border-bottom: none;
+    }
+
+    .qr-detail-label {
+        color: var(--dark-text-secondary);
+        font-size: 14px;
+    }
+
+    .qr-detail-value {
+        font-weight: 600;
+        color: var(--dark-text);
+        text-align: right;
+        max-width: 60%;
+        word-break: break-all;
+    }
+
+    .qr-result-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn-secondary {
+        background: var(--dark-surface-light);
+        color: var(--dark-text);
+        border: 1px solid var(--border-color);
+        padding: 15px;
+        border-radius: var(--border-radius);
+        font-size: 16px;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+
+    .btn-secondary:hover {
+        background: var(--dark-surface-lighter);
+        border-color: var(--primary-color);
+    }
+
+    /* Toast Notification */
+    .toast-notification {
+        position: fixed;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--dark-surface);
+        color: var(--dark-text);
+        padding: 15px 25px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-lg);
+        z-index: 5000;
+        display: none;
+        align-items: center;
+        gap: 10px;
+        max-width: 90%;
+        animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    }
+
+    @keyframes modalSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .toast-notification.success {
+        background: linear-gradient(135deg, var(--success-color), #219653);
+        color: white;
+    }
+
+    .toast-notification.error {
+        background: linear-gradient(135deg, var(--danger-color), #c0392b);
+        color: white;
+    }
+
+    .toast-notification.warning {
+        background: linear-gradient(135deg, var(--warning-color), #d35400);
+        color: white;
+    }
+
+    .qr-amount-input {
+        margin-top: 20px;
+        padding: 15px;
+        background: var(--dark-surface-light);
+        border-radius: 8px;
+    }
+
+    .amount-input-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .amount-input-group label {
+        color: var(--dark-text);
+        font-weight: 500;
+        min-width: 60px;
+        font-size: 14px;
+    }
+
+    .amount-input-group input {
+        flex: 1;
+        padding: 12px;
+        background: var(--dark-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--dark-text);
+        font-size: 16px;
+        text-align: right;
+    }
+
+    .quick-amounts {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .quick-amount {
+        flex: 1;
+        padding: 10px;
+        background: var(--dark-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--dark-text);
+        cursor: pointer;
+        transition: var(--transition);
+        text-align: center;
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    .quick-amount:hover {
+        border-color: var(--primary-color);
+        background: rgba(var(--primary-rgb), 0.1);
+    }
+
+    .quick-amount.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    /* Self Scan Error Modal */
+    .self-scan-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 4000;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+
+    .self-scan-content {
+        background: var(--dark-surface);
+        border-radius: var(--border-radius);
+        padding: 40px 30px;
+        width: 100%;
+        max-width: 400px;
+        box-shadow: var(--shadow-lg);
+        animation: modalSlideUp 0.3s ease;
+        text-align: center;
+    }
+
+    .self-scan-header i {
+        font-size: 64px;
+        color: var(--warning-color);
+        margin-bottom: 20px;
+    }
+
+    .self-scan-header h3 {
+        margin: 0 0 15px 0;
+        color: var(--dark-text);
+        font-size: 24px;
+    }
+
+    .self-scan-header p {
+        color: var(--dark-text-secondary);
+        margin: 0 0 25px 0;
+        line-height: 1.5;
+    }
+
+    .self-scan-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .btn-warning {
+        background: var(--warning-color);
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: var(--border-radius);
+        font-size: 16px;
+        cursor: pointer;
+        transition: var(--transition);
+        font-weight: 500;
+    }
+
+    .btn-warning:hover {
+        background: #d35400;
+        transform: translateY(-2px);
+    }
+
+    .btn-outline {
+        background: transparent;
+        color: var(--dark-text);
+        border: 2px solid var(--border-color);
+        padding: 15px;
+        border-radius: var(--border-radius);
+        font-size: 16px;
+        cursor: pointer;
+        transition: var(--transition);
+        font-weight: 500;
+    }
+
+    .btn-outline:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        transform: translateY(-2px);
+    }
+
+    /* Prevent scrolling when scanner is open */
+    body.scanner-open {
+        overflow: hidden;
+    }
+
+    /* Adjust container for bottom nav */
+    .container {
+        padding-bottom: 80px;
+    }
+
+    /* File Upload Options */
+    .upload-options {
+        display: flex;
+        gap: 15px;
+        margin-top: 20px;
+    }
+
+    .upload-option-btn {
+        flex: 1;
+        padding: 20px 15px;
+        background: var(--dark-surface);
+        border: 2px solid var(--border-color);
+        border-radius: var(--border-radius);
+        color: var(--dark-text);
+        cursor: pointer;
+        transition: var(--transition);
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .upload-option-btn i {
+        font-size: 36px;
+        margin-bottom: 10px;
+        color: var(--primary-color);
+    }
+
+    .upload-option-btn:hover {
+        border-color: var(--primary-color);
+        background: rgba(var(--primary-rgb), 0.1);
+        transform: translateY(-3px);
+    }
+
+    .upload-option-btn span {
+        font-size: 14px;
+        font-weight: 500;
+        margin-top: 5px;
+    }
+
+    /* Scanner Instructions */
+    .scanner-instructions {
+        position: absolute;
+        bottom: 120px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        color: white;
+        z-index: 10;
+        padding: 0 20px;
+        font-size: 14px;
+        opacity: 0.8;
+    }
+
+    /* Switch Camera Button */
+    .switch-camera-btn {
+        position: absolute;
+        top: 20px;
+        right: 80px;
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: var(--transition);
+        z-index: 10;
+    }
+
+    .switch-camera-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+    
+    /* PWA Install Button Container */
+    #pwaInstallContainer {
+        position: fixed;
+        bottom: 80px;
+        left: 0;
+        right: 0;
+        padding: 0 20px;
+        z-index: 999;
+        display: none;
+        animation: slideUpButton 0.3s ease-out;
+    }
+    
+    @keyframes slideUpButton {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    #pwaInstallBtn {
+        display: block;
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        border: none;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(var(--primary-rgb), 0.3);
+        transition: all 0.3s ease;
+        text-align: center;
+    }
+    
+    #pwaInstallBtn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 25px rgba(var(--primary-rgb), 0.4);
+    }
+    
+    #pwaInstallBtn:active {
+        transform: translateY(0);
+    }
+    
+    #pwaInstallBtn i {
+        margin-right: 10px;
+        font-size: 18px;
+    }
+    
+    /* Install Button Dismiss Button */
+    #pwaDismissBtn {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background: var(--dark-surface);
+        border: 2px solid var(--border-color);
+        color: var(--dark-text-secondary);
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 14px;
+        z-index: 1000;
+    }
+    
+    #pwaDismissBtn:hover {
+        background: var(--danger-color);
+        color: white;
+        border-color: var(--danger-color);
+    }
+    
+    /* PIN Entry Modal Styles */
+    .pin-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 4500;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+    
+    .pin-modal-content {
+        background: var(--dark-surface);
+        border-radius: var(--border-radius);
+        padding: 30px;
+        width: 100%;
+        max-width: 400px;
+        box-shadow: var(--shadow-lg);
+        animation: modalSlideUp 0.3s ease;
+    }
+    
+    .pin-modal-header {
+        text-align: center;
+        margin-bottom: 25px;
+    }
+    
+    .pin-modal-header i {
+        font-size: 48px;
+        color: var(--primary-color);
+        margin-bottom: 15px;
+    }
+    
+    .pin-modal-header h3 {
+        margin: 0 0 10px 0;
+        color: var(--dark-text);
+        font-size: 20px;
+    }
+    
+    .pin-modal-header p {
+        color: var(--dark-text-secondary);
+        margin: 0;
+        font-size: 14px;
+    }
+    
+    .pin-input-container {
+        background: var(--dark-surface-light);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .pin-input-group {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    
+    .pin-input-group label {
+        display: block;
+        color: var(--dark-text-secondary);
+        font-size: 14px;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+    
+    .pin-input-wrapper {
+        position: relative;
+    }
+    
+    .pin-input {
+        width: 100%;
+        padding: 15px 50px 15px 15px;
+        background: var(--dark-bg);
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--dark-text);
+        font-size: 20px;
+        letter-spacing: 4px;
+        text-align: center;
+        font-family: monospace;
+        transition: var(--transition);
+    }
+    
+    .pin-input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
+    }
+    
+    .pin-input.error {
+        border-color: var(--danger-color);
+        animation: shake 0.5s ease;
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    
+    .toggle-password {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        border: none;
+        color: var(--dark-text-secondary);
+        cursor: pointer;
+        font-size: 18px;
+        padding: 5px;
+        transition: var(--transition);
+        z-index: 2;
+    }
+    
+    .toggle-password:hover {
+        color: var(--primary-color);
+    }
+    
+    .pin-hint {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--dark-text-secondary);
+        font-size: 13px;
+        margin-top: 8px;
+    }
+    
+    .pin-hint i {
+        font-size: 12px;
+    }
+    
+    .pin-dots {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin: 15px 0;
+    }
+    
+    .pin-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--dark-surface);
+        border: 2px solid var(--border-color);
+        transition: var(--transition);
+    }
+    
+    .pin-dot.filled {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    
+    .pin-numpad {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .numpad-btn {
+        background: var(--dark-surface);
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--dark-text);
+        font-size: 20px;
+        font-weight: 600;
+        height: 60px;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        user-select: none;
+    }
+    
+    .numpad-btn:hover {
+        background: rgba(var(--primary-rgb), 0.1);
+        border-color: var(--primary-color);
+        transform: translateY(-2px);
+    }
+    
+    .numpad-btn:active {
+        transform: translateY(0);
+    }
+    
+    .numpad-btn.clear {
+        grid-column: span 2;
+        background: var(--dark-surface-light);
+        color: var(--danger-color);
+        font-size: 16px;
+    }
+    
+    .numpad-btn.clear:hover {
+        background: rgba(var(--danger-rgb), 0.1);
+        border-color: var(--danger-color);
+    }
+    
+    .pin-modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .pin-modal-actions .btn-block {
+        flex: 2;
+        margin-top: 0;
+    }
+    
+    .pin-modal-actions .btn-secondary {
+        flex: 1;
+        margin-top: 0;
+    }
+    
+    .forgot-pin-link {
+        text-align: center;
+        margin-top: 15px;
+    }
+    
+    .forgot-pin-link a {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-size: 14px;
+        transition: var(--transition);
+    }
+    
+    .forgot-pin-link a:hover {
+        text-decoration: underline;
+    }
+    
+    .pin-attempts {
+        text-align: center;
+        color: var(--warning-color);
+        font-size: 13px;
+        margin-top: 10px;
+        display: none;
+    }
+    
+    .pin-attempts.show {
+        display: block;
+    }
+    
+    /* Notification Badge */
+    .notification-badge {
+        position: absolute;
+        top: -5px;
+        right: 0;
+        background: var(--danger-color);
+        color: white;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        animation: pulse 2s infinite;
+    }
+    
+    /* Notification Card Styles */
+    .notification-card {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-left: 4px solid #ddd;
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .notification-card.unread {
+        background: #f8f9ff;
+        border-left-color: #007bff;
+    }
+
+    .notification-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+
+    .notification-icon {
+        font-size: 1.5rem;
+        min-width: 30px;
+        text-align: center;
+    }
+
+    .notification-content {
+        flex: 1;
+    }
+
+    .notification-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+    }
+
+    .notification-header h4 {
+        margin: 0;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    .notification-time {
+        font-size: 0.8rem;
+        color: #888;
+    }
+
+    .notification-message {
+        margin: 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .notification-actions {
+        display: flex;
+        gap: 5px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 50px 20px;
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        color: #ddd;
+        margin-bottom: 20px;
+    }
+
+    .notification-filters {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .filter-btn {
+        padding: 8px 15px;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .filter-btn.active {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+
+    .filter-btn:hover:not(.active) {
+        background: #f8f9fa;
+    }
+
+    /* Notification menu item */
+    .nav-item.notifications {
+        position: relative;
+    }
+    
+    /* Header actions */
+    .header-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% block content %}{% endblock %}
+        
+        <!-- PWA Install Button Container -->
+        {% if session.get('authenticated') %}
+        <div id="pwaInstallContainer">
+            <div style="position: relative; max-width: 400px; margin: 0 auto;">
+                <button id="pwaInstallBtn">
+                    <i class="fas fa-download"></i> Install EasyCash App
+                </button>
+                <button id="pwaDismissBtn" title="Dismiss">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p style="text-align: center; color: var(--dark-text-secondary); font-size: 12px; margin-top: 8px; max-width: 400px; margin-left: auto; margin-right: auto;">
+                Install for a better experience. Works offline!
+            </p>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% if session.get('authenticated') %}
+    <nav class="bottom-nav">
+        <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.path == '/dashboard' %}active{% endif %}" title="Home">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="{{ url_for('transactions') }}" class="nav-item {% if request.path == '/transactions' %}active{% endif %}" title="Transactions">
+            <i class="fas fa-exchange-alt"></i>
+            <span>Transactions</span>
+        </a>
+        <!-- QR Scan Button -->
+        <div class="nav-item qr-scan-trigger" 
+             title="Scan QR Code" 
+             id="qrScanTrigger">
+            <i class="fas fa-qrcode"></i>
+            <span>Scan QR</span>
+        </div>
+        <a href="{{ url_for('notifications_page') }}" class="nav-item notifications {% if request.path == '/notifications' %}active{% endif %}" title="Notifications">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+            {% if unread_count and unread_count > 0 %}
+            <span class="notification-badge" id="notification-badge">{{ unread_count if unread_count < 10 else '9+' }}</span>
+            {% endif %}
+        </a>
+        <a href="{{ url_for('logout') }}" class="nav-item" title="Logout">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+        </a>
+    </nav>
+    {% endif %}
+    
+    <!-- Camera Scanner Modal -->
+    <div class="scanner-overlay" id="cameraScanner">
+        <div class="scanner-header">
+            <h3>Scan QR Code</h3>
+            <button class="scanner-close" id="closeCameraBtn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <button class="switch-camera-btn" id="switchCameraBtn" title="Switch Camera">
+            <i class="fas fa-camera-retro"></i>
+        </button>
+        
+        <div class="scanner-preview" id="scannerPreview">
+            <!-- Video element for camera feed -->
+            <video id="cameraVideo" playsinline autoplay></video>
+            
+            <!-- Scanner guide overlay -->
+            <div class="scanner-guide"></div>
+            
+            <!-- Instructions -->
+            <div class="scanner-instructions">
+                Position the QR code within the frame
+            </div>
+            
+            <!-- Camera fallback (shown if camera fails) -->
+            <div class="camera-fallback" id="cameraFallback" style="display: none;">
+                <i class="fas fa-camera-slash"></i>
+                <h3>Camera Not Available</h3>
+                <p>Unable to access camera. Please use file upload to scan QR codes.</p>
+                <button class="btn-block" onclick="openGallery()" style="max-width: 300px;">
+                    <i class="fas fa-image"></i> Upload QR Image
+                </button>
+            </div>
+        </div>
+        
+        <!-- Camera Controls -->
+        <div class="scanner-controls">
+            <button class="scanner-control-btn" id="galleryBtn" title="Upload from Gallery">
+                <i class="fas fa-images"></i>
+            </button>
+            <button class="scanner-control-btn warning" id="flashlightBtn" title="Toggle Flashlight">
+                <i class="fas fa-lightbulb"></i>
+            </button>
+            <button class="scanner-control-btn" id="captureBtn" title="Capture QR Code">
+                <i class="fas fa-camera"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Gallery Upload Overlay -->
+    <div class="gallery-overlay" id="galleryOverlay">
+        <div class="gallery-header">
+            <h3>Upload QR Code</h3>
+            <button class="scanner-close" id="closeGalleryBtn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="gallery-content">
+            <div class="file-upload-card" id="dropArea">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <h4>Upload QR Image</h4>
+                <p>Drag & drop or click to browse</p>
+                <input type="file" id="galleryFileInput" accept="image/*" hidden>
+                <p class="file-types">Supports: PNG, JPG, JPEG, GIF, BMP (Max 5MB)</p>
+            </div>
+            <div class="file-preview" id="filePreview">
+                <img id="previewImage" src="" alt="QR Preview">
+                <button class="btn-block" id="scanImageBtn" disabled>
+                    <i class="fas fa-search"></i> Scan QR Code
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- QR Result Modal -->
+    <div class="qr-result-modal" id="qrResultModal">
+        <div class="qr-result-content">
+            <div class="qr-result-header">
+                <i class="fas fa-check-circle"></i>
+                <h3>QR Code Scanned</h3>
+                <p>Payment details ready</p>
+            </div>
+            <div class="qr-result-details">
+                <div class="qr-detail-item">
+                    <span class="qr-detail-label">UPI ID:</span>
+                    <span class="qr-detail-value" id="resultUpiId">Loading...</span>
+                </div>
+                <div class="qr-detail-item">
+                    <span class="qr-detail-label">Name:</span>
+                    <span class="qr-detail-value" id="resultName">Loading...</span>
+                </div>
+                <div class="qr-detail-item">
+                    <span class="qr-detail-label">Status:</span>
+                    <span class="qr-detail-value" id="resultStatus">Checking...</span>
+                </div>
+            </div>
+            
+            <!-- Amount Input Section -->
+            <div class="qr-amount-input" id="qrAmountSection">
+                <div class="amount-input-group">
+                    <label for="qrAmount">Amount:</label>
+                    <input type="number" id="qrAmount" min="1" max="50000" step="0.01" placeholder="0.00">
+                </div>
+                
+                <div class="quick-amounts">
+                    <button class="quick-amount" data-amount="100">₹100</button>
+                    <button class="quick-amount" data-amount="500">₹500</button>
+                    <button class="quick-amount" data-amount="1000">₹1000</button>
+                    <button class="quick-amount" data-amount="2000">₹2000</button>
+                </div>
+            </div>
+            
+            <div class="qr-result-actions">
+                <button class="btn-block" id="proceedToPaymentBtn" disabled>
+                    <i class="fas fa-paper-plane"></i> Proceed to Payment
+                </button>
+                <button class="btn-secondary" id="closeResultBtn">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PIN Entry Modal -->
+    <div class="pin-modal" id="pinModal">
+        <div class="pin-modal-content">
+            <div class="pin-modal-header">
+                <i class="fas fa-lock"></i>
+                <h3>Enter PIN to Confirm</h3>
+                <p id="pinModalDescription">Enter your 6-digit PIN to confirm the payment</p>
+            </div>
+            
+            <div class="pin-input-container">
+                <div class="pin-input-group">
+                    <label for="pinInput">6-Digit PIN</label>
+                    <div class="pin-input-wrapper">
+                        <input type="password" 
+                               id="pinInput" 
+                               class="pin-input" 
+                               maxlength="6" 
+                               placeholder="••••••"
+                               inputmode="numeric">
+                        <button type="button" class="toggle-password" id="togglePinBtn">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="pin-hint">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Enter the 6-digit PIN you set during registration</span>
+                    </div>
+                </div>
+                
+                <!-- PIN Dots Visualization -->
+                <div class="pin-dots" id="pinDots">
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                </div>
+                
+                <!-- Attempts Counter -->
+                <div class="pin-attempts" id="pinAttempts">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span id="attemptsText">Incorrect PIN. Attempts remaining: <span id="attemptsCount">3</span></span>
+                </div>
+            </div>
+            
+            <!-- Numeric Keypad -->
+            <div class="pin-numpad">
+                <button class="numpad-btn" data-digit="1">1</button>
+                <button class="numpad-btn" data-digit="2">2</button>
+                <button class="numpad-btn" data-digit="3">3</button>
+                <button class="numpad-btn" data-digit="4">4</button>
+                <button class="numpad-btn" data-digit="5">5</button>
+                <button class="numpad-btn" data-digit="6">6</button>
+                <button class="numpad-btn" data-digit="7">7</button>
+                <button class="numpad-btn" data-digit="8">8</button>
+                <button class="numpad-btn" data-digit="9">9</button>
+                <button class="numpad-btn clear" id="clearPinBtn">
+                    <i class="fas fa-backspace"></i> Clear
+                </button>
+                <button class="numpad-btn" data-digit="0">0</button>
+            </div>
+            
+            <div class="pin-modal-actions">
+                <button class="btn-block" id="confirmPinBtn" disabled>
+                    <i class="fas fa-check-circle"></i> Confirm Payment
+                </button>
+                <button class="btn-secondary" id="cancelPinBtn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+            
+            <div class="forgot-pin-link">
+                <a href="#" id="forgotPinLink">
+                    <i class="fas fa-key"></i> Forgot PIN?
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Self Scan Error Modal -->
+    <div class="self-scan-modal" id="selfScanModal">
+        <div class="self-scan-content">
+            <div class="self-scan-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Cannot Send Money to Yourself</h3>
+                <p>You scanned your own QR code. You cannot make payments to yourself. Please scan a different QR code to send money to someone else.</p>
+                <p><small>Your UPI ID: <strong id="currentUserUpi">Loading...</strong></small></p>
+            </div>
+            <div class="self-scan-actions">
+                <button class="btn-warning" id="scanDifferentBtn">
+                    <i class="fas fa-qrcode"></i> Try Different QR
+                </button>
+                <button class="btn-outline" id="closeSelfScanBtn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div class="toast-notification" id="toastNotification"></div>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 5000; justify-content: center; align-items: center;">
+        <div class="loading-spinner" style="text-align: center; color: white;">
+            <div class="spinner" style="width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.1); border-top-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+            <p id="loadingText">Processing...</p>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+    
+    <!-- Enhanced QR Scanner Script -->
+    <script>
+    class EnhancedQRScanner {
+        constructor() {
+            this.scannedData = null;
+            this.cameraStream = null;
+            this.isFlashOn = false;
+            this.currentFacingMode = 'environment'; // 'environment' for rear camera, 'user' for front
+            this.videoTrack = null;
+            this.scanInterval = null;
+            this.currentUserUPI = '{{ user.upi_id if user and user.upi_id else "" }}'.trim().toLowerCase();
+            this.currentUserName = '{{ user.username if user and user.username else "" }}'.trim();
+            this.pinAttempts = 3;
+            this.currentPaymentAmount = 0;
+        }
+
+        async startCamera() {
+            try {
+                const scannerPreview = document.getElementById('scannerPreview');
+                const cameraFallback = document.getElementById('cameraFallback');
+                const video = document.getElementById('cameraVideo');
+                
+                // Hide fallback, show video
+                cameraFallback.style.display = 'none';
+                video.style.display = 'block';
+                
+                // Stop existing stream if any
+                if (this.cameraStream) {
+                    this.stopCamera();
+                }
+                
+                // Get camera constraints
+                const constraints = {
+                    video: {
+                        facingMode: this.currentFacingMode,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                };
+                
+                // Request camera access
+                this.cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = this.cameraStream;
+                
+                // Store video track for flashlight control
+                this.videoTrack = this.cameraStream.getVideoTracks()[0];
+                
+                // Start QR scanning
+                this.startQRScanning();
+                
+                return true;
+            } catch (error) {
+                console.error('Camera error:', error);
+                this.showCameraFallback();
+                return false;
+            }
+        }
+
+        showCameraFallback() {
+            const scannerPreview = document.getElementById('scannerPreview');
+            const video = document.getElementById('cameraVideo');
+            const cameraFallback = document.getElementById('cameraFallback');
+            
+            video.style.display = 'none';
+            cameraFallback.style.display = 'flex';
+        }
+
+        stopCamera() {
+            if (this.cameraStream) {
+                this.cameraStream.getTracks().forEach(track => track.stop());
+                this.cameraStream = null;
+                this.videoTrack = null;
+            }
+            
+            if (this.scanInterval) {
+                clearInterval(this.scanInterval);
+                this.scanInterval = null;
+            }
+            
+            // Turn off flashlight
+            this.toggleFlashlight(false);
+        }
+
+        async toggleFlashlight(force = null) {
+            if (!this.videoTrack || !this.videoTrack.getCapabilities) {
+                return false;
+            }
+            
+            const capabilities = this.videoTrack.getCapabilities();
+            if (!capabilities.torch) {
+                return false;
+            }
+            
+            const flashlightBtn = document.getElementById('flashlightBtn');
+            this.isFlashOn = force !== null ? force : !this.isFlashOn;
+            
+            try {
+                await this.videoTrack.applyConstraints({
+                    advanced: [{ torch: this.isFlashOn }]
+                });
+                
+                // Update button state
+                flashlightBtn.classList.toggle('active', this.isFlashOn);
+                
+                return true;
+            } catch (error) {
+                console.error('Flashlight error:', error);
+                return false;
+            }
+        }
+
+        async switchCamera() {
+            this.currentFacingMode = this.currentFacingMode === 'environment' ? 'user' : 'environment';
+            await this.stopCamera();
+            await this.startCamera();
+        }
+
+        startQRScanning() {
+            // For PythonAnywhere, we can't do real-time QR scanning with camera
+            // This is a placeholder that would need a proper QR scanning library
+            // For now, we'll just show the camera and let users capture an image
+            
+            console.log('Camera started - QR scanning ready');
+        }
+
+        captureImageFromCamera() {
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            // Set canvas dimensions to match video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Draw video frame to canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Convert to blob
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => {
+                    resolve(blob);
+                }, 'image/jpeg');
+            });
+        }
+
+        async processScannedData(qrData) {
+            try {
+                this.showLoading('Validating QR code...');
+                
+                // First try to parse locally
+                const parsedData = this.parseUPIQR(qrData);
+                if (!parsedData || !parsedData.upiId) {
+                    this.hideLoading();
+                    this.showError('Invalid QR format. Could not extract UPI ID.');
+                    return false;
+                }
+
+                // CRITICAL: Check if user is scanning their own QR BEFORE anything else
+                const scannedUpi = parsedData.upiId.toLowerCase();
+                
+                // Show current user UPI in self-scan modal
+                document.getElementById('currentUserUpi').textContent = this.currentUserUPI || 'Not set';
+                
+                if (this.currentUserUPI && scannedUpi === this.currentUserUPI) {
+                    this.hideLoading();
+                    this.showSelfScanError(parsedData);
+                    return false;
+                }
+                
+                // Also check if the name matches (in case UPI ID is different but it's still the user)
+                if (this.currentUserName && parsedData.name && 
+                    parsedData.name.toLowerCase() === this.currentUserName.toLowerCase()) {
+                    this.hideLoading();
+                    this.showSelfScanError(parsedData);
+                    return false;
+                }
+
+                // Validate with server
+                const response = await fetch('/qr/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ qr_data: qrData })
+                });
+                
+                const result = await response.json();
+                
+                this.hideLoading();
+                
+                if (result.success) {
+                    // Final check with server-side validation
+                    if (result.user && result.user.upi_id && this.currentUserUPI && 
+                        result.user.upi_id.toLowerCase() === this.currentUserUPI) {
+                        this.showSelfScanError(result.user);
+                        return false;
+                    }
+                    
+                    this.scannedData = {
+                        qrData: qrData,
+                        user: result.user,
+                        isRegistered: result.is_registered,
+                        message: result.message
+                    };
+                    
+                    this.showResults();
+                    return true;
+                } else {
+                    // UPI not found in EasyCash - allow external transfer
+                    // Final check for self-scan
+                    if (scannedUpi === this.currentUserUPI) {
+                        this.showSelfScanError(parsedData);
+                        return false;
+                    }
+                    
+                    const user = {
+                        upi_id: parsedData.upiId,
+                        username: parsedData.name || parsedData.upiId.split('@')[0],
+                        is_registered: false
+                    };
+                    
+                    this.scannedData = {
+                        qrData: qrData,
+                        user: user,
+                        isRegistered: false,
+                        message: 'External UPI user'
+                    };
+                    
+                    this.showResults();
+                    return true;
+                }
+            } catch (error) {
+                this.hideLoading();
+                console.error('Error processing QR data:', error);
+                this.showError('Failed to process QR code: ' + error.message);
+                return false;
+            }
+        }
+
+        showSelfScanError(parsedData) {
+            // Show self-scan error modal
+            const modal = document.getElementById('selfScanModal');
+            
+            // Update the modal with current user info
+            document.getElementById('currentUserUpi').textContent = this.currentUserUPI || 'Not set';
+            
+            modal.style.display = 'flex';
+            document.body.classList.add('scanner-open');
+            
+            // Set up modal buttons
+            document.getElementById('scanDifferentBtn').onclick = () => {
+                modal.style.display = 'none';
+                document.body.classList.remove('scanner-open');
+                
+                // Re-open camera scanner
+                setTimeout(() => {
+                    openCameraScanner();
+                }, 300);
+            };
+            
+            document.getElementById('closeSelfScanBtn').onclick = () => {
+                modal.style.display = 'none';
+                document.body.classList.remove('scanner-open');
+            };
+            
+            // Show toast notification
+            this.showToast('You cannot send money to yourself', 'warning');
+        }
+
+        parseUPIQR(qrData) {
+            try {
+                console.log('Parsing QR data:', qrData);
+                
+                // Clean the QR data
+                qrData = qrData.trim();
+                
+                // Case 1: Direct UPI ID (e.g., "username@upi")
+                if (qrData.includes('@') && !qrData.includes('://')) {
+                    return {
+                        upiId: qrData,
+                        name: qrData.split('@')[0]
+                    };
+                }
+                
+                // Case 2: UPI URL format
+                if (qrData.toLowerCase().includes('upi://') || qrData.toLowerCase().includes('upi://pay')) {
+                    // Extract parameters from UPI URL
+                    let pa = null; // UPI ID
+                    let pn = null; // Name
+                    let am = null; // Amount
+                    
+                    // Try to extract pa (UPI ID) parameter
+                    const paMatch = qrData.match(/pa=([^&]*)/i);
+                    if (paMatch) {
+                        pa = decodeURIComponent(paMatch[1]);
+                    }
+                    
+                    // Try to extract pn (name) parameter
+                    const pnMatch = qrData.match(/pn=([^&]*)/i);
+                    if (pnMatch) {
+                        pn = decodeURIComponent(pnMatch[1]);
+                    }
+                    
+                    // If we have a UPI ID, return it
+                    if (pa) {
+                        return {
+                            upiId: pa,
+                            name: pn || pa.split('@')[0],
+                            amount: am
+                        };
+                    }
+                }
+                
+                // Case 3: Try to extract UPI ID using regex
+                const upiPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+)/i;
+                const match = qrData.match(upiPattern);
+                
+                if (match) {
+                    return {
+                        upiId: match[1],
+                        name: match[1].split('@')[0]
+                    };
+                }
+                
+                return null;
+            } catch (error) {
+                console.error('Error parsing UPI QR:', error);
+                return null;
+            }
+        }
+
+        showResults() {
+            if (!this.scannedData || !this.scannedData.user) {
+                this.showError('Invalid scan data');
+                return;
+            }
+            
+            const user = this.scannedData.user;
+            
+            // Update UI with scanned data
+            document.getElementById('resultUpiId').textContent = user.upi_id || 'Unknown';
+            document.getElementById('resultName').textContent = user.username || 'Unknown';
+            
+            // Set status
+            const resultStatus = document.getElementById('resultStatus');
+            if (this.scannedData.isRegistered) {
+                resultStatus.textContent = '✓ Registered EasyCash User';
+                resultStatus.style.color = 'var(--success-color)';
+            } else {
+                resultStatus.textContent = '⚠️ External UPI User';
+                resultStatus.style.color = 'var(--warning-color)';
+            }
+            
+            // Show QR result modal
+            document.getElementById('qrResultModal').style.display = 'flex';
+            document.body.classList.add('scanner-open');
+            
+            // Set up amount input
+            this.setupAmountInput();
+        }
+
+        setupAmountInput() {
+            const amountInput = document.getElementById('qrAmount');
+            const quickAmounts = document.querySelectorAll('.quick-amount');
+            const proceedBtn = document.getElementById('proceedToPaymentBtn');
+            
+            // Clear any existing data
+            amountInput.value = '';
+            proceedBtn.disabled = true;
+            quickAmounts.forEach(btn => btn.classList.remove('active'));
+            
+            // Quick amount buttons
+            quickAmounts.forEach(button => {
+                button.addEventListener('click', () => {
+                    const amount = button.dataset.amount;
+                    amountInput.value = amount;
+                    
+                    // Update active state
+                    quickAmounts.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    // Enable proceed button
+                    this.updateProceedButton();
+                });
+            });
+            
+            // Amount input listener
+            amountInput.addEventListener('input', () => {
+                // Clear quick amounts active state
+                quickAmounts.forEach(btn => btn.classList.remove('active'));
+                
+                // Update proceed button
+                this.updateProceedButton();
+            });
+            
+            // Proceed button click
+            proceedBtn.addEventListener('click', () => {
+                this.processPayment();
+            });
+        }
+
+        updateProceedButton() {
+            const amountInput = document.getElementById('qrAmount');
+            const proceedBtn = document.getElementById('proceedToPaymentBtn');
+            const amount = parseFloat(amountInput.value) || 0;
+            
+            if (amount > 0 && amount <= 50000) {
+                proceedBtn.disabled = false;
+                proceedBtn.innerHTML = `<i class="fas fa-paper-plane"></i> Send ₹${amount.toFixed(2)}`;
+            } else {
+                proceedBtn.disabled = true;
+                proceedBtn.innerHTML = `<i class="fas fa-paper-plane"></i> Proceed to Payment`;
+            }
+        }
+
+        processPayment() {
+            const amountInput = document.getElementById('qrAmount');
+            const amount = parseFloat(amountInput.value) || 0;
+            
+            // Validate amount
+            if (amount <= 0 || amount > 50000) {
+                this.showToast('Please enter a valid amount (₹1 - ₹50,000)', 'error');
+                return;
+            }
+            
+            // Store the amount for later use
+            this.currentPaymentAmount = amount;
+            
+            // Show PIN modal instead of alert
+            this.showPinPrompt(amount);
+        }
+
+        showPinPrompt(amount) {
+            // Close QR result modal
+            document.getElementById('qrResultModal').style.display = 'none';
+            document.body.classList.remove('scanner-open');
+            
+            // Reset PIN attempts
+            this.pinAttempts = 3;
+            
+            // Update PIN modal description
+            const description = document.getElementById('pinModalDescription');
+            description.textContent = `Enter your 6-digit PIN to confirm payment of ₹${amount.toFixed(2)}`;
+            
+            // Show PIN modal
+            const modal = document.getElementById('pinModal');
+            modal.style.display = 'flex';
+            document.body.classList.add('scanner-open');
+            
+            // Focus on PIN input
+            setTimeout(() => {
+                document.getElementById('pinInput').focus();
+            }, 300);
+            
+            // Initialize PIN input
+            this.initPinInput();
+        }
+
+        initPinInput() {
+            const pinInput = document.getElementById('pinInput');
+            const toggleBtn = document.getElementById('togglePinBtn');
+            const pinDots = document.getElementById('pinDots').children;
+            const numpadBtns = document.querySelectorAll('.numpad-btn[data-digit]');
+            const clearBtn = document.getElementById('clearPinBtn');
+            const confirmBtn = document.getElementById('confirmPinBtn');
+            const cancelBtn = document.getElementById('cancelPinBtn');
+            const attemptsDiv = document.getElementById('pinAttempts');
+            const attemptsCount = document.getElementById('attemptsCount');
+            
+            // Reset everything
+            pinInput.value = '';
+            pinInput.type = 'password';
+            pinInput.classList.remove('error');
+            confirmBtn.disabled = true;
+            attemptsDiv.classList.remove('show');
+            
+            // Update PIN dots
+            this.updatePinDots('');
+            
+            // Toggle password visibility
+            toggleBtn.addEventListener('click', () => {
+                const isPassword = pinInput.type === 'password';
+                pinInput.type = isPassword ? 'text' : 'password';
+                toggleBtn.innerHTML = isPassword ? 
+                    '<i class="fas fa-eye-slash"></i>' : 
+                    '<i class="fas fa-eye"></i>';
+            });
+            
+            // Handle keyboard input
+            pinInput.addEventListener('input', (e) => {
+                const pin = e.target.value.replace(/\D/g, '').slice(0, 6);
+                pinInput.value = pin;
+                this.updatePinDots(pin);
+                confirmBtn.disabled = pin.length !== 6;
+            });
+            
+            // Handle numpad buttons
+            numpadBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (pinInput.value.length >= 6) return;
+                    
+                    const digit = btn.dataset.digit;
+                    const newPin = pinInput.value + digit;
+                    pinInput.value = newPin;
+                    this.updatePinDots(newPin);
+                    
+                    if (newPin.length === 6) {
+                        confirmBtn.disabled = false;
+                        confirmBtn.focus();
+                    }
+                });
+            });
+            
+            // Clear button
+            clearBtn.addEventListener('click', () => {
+                pinInput.value = '';
+                this.updatePinDots('');
+                confirmBtn.disabled = true;
+                pinInput.focus();
+            });
+            
+            // Confirm button
+            confirmBtn.addEventListener('click', () => {
+                this.submitPayment(this.currentPaymentAmount, pinInput.value);
+            });
+            
+            // Cancel button
+            cancelBtn.addEventListener('click', () => {
+                const modal = document.getElementById('pinModal');
+                modal.style.display = 'none';
+                document.body.classList.remove('scanner-open');
+                
+                // Re-open QR result modal
+                setTimeout(() => {
+                    document.getElementById('qrResultModal').style.display = 'flex';
+                    document.body.classList.add('scanner-open');
+                }, 300);
+            });
+            
+            // Forgot PIN link
+            document.getElementById('forgotPinLink').addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showToast('Please contact support to reset your PIN', 'info');
+            });
+            
+            // Handle Enter key
+            pinInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && pinInput.value.length === 6) {
+                    this.submitPayment(this.currentPaymentAmount, pinInput.value);
+                }
+            });
+            
+            // Focus on input
+            pinInput.focus();
+        }
+
+        updatePinDots(pin) {
+            const dots = document.getElementById('pinDots').children;
+            for (let i = 0; i < dots.length; i++) {
+                if (i < pin.length) {
+                    dots[i].classList.add('filled');
+                } else {
+                    dots[i].classList.remove('filled');
+                }
+            }
+        }
+
+        async submitPayment(amount, pin) {
+            // Validate PIN
+            if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+                this.showToast('Please enter a valid 6-digit PIN', 'error');
+                return;
+            }
+            
+            // Decrement attempts if wrong PIN
+            const pinInput = document.getElementById('pinInput');
+            const attemptsDiv = document.getElementById('pinAttempts');
+            const attemptsCount = document.getElementById('attemptsCount');
+            const confirmBtn = document.getElementById('confirmPinBtn');
+            
+            try {
+                this.showLoading('Processing payment...');
+                
+                const formData = new FormData();
+                formData.append('upi_id', this.scannedData.user.upi_id);
+                formData.append('username', this.scannedData.user.username);
+                formData.append('qr_data', this.scannedData.qrData);
+                formData.append('amount', amount);
+                formData.append('pin', pin);
+                
+                const response = await fetch('/send-money-qr', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                this.hideLoading();
+                
+                if (result.success) {
+                    // Close PIN modal
+                    document.getElementById('pinModal').style.display = 'none';
+                    document.body.classList.remove('scanner-open');
+                    
+                    this.showToast('Payment processed successfully!', 'success');
+                    
+                    setTimeout(() => {
+                        window.location.href = result.redirect || '/dashboard';
+                    }, 1500);
+                } else {
+                    // Handle incorrect PIN
+                    if (result.error && result.error.toLowerCase().includes('pin')) {
+                        this.pinAttempts--;
+                        
+                        if (this.pinAttempts > 0) {
+                            // Show error and reset input
+                            pinInput.value = '';
+                            pinInput.classList.add('error');
+                            this.updatePinDots('');
+                            confirmBtn.disabled = true;
+                            
+                            attemptsCount.textContent = this.pinAttempts;
+                            attemptsDiv.classList.add('show');
+                            
+                            this.showToast(`Incorrect PIN. ${this.pinAttempts} attempts remaining`, 'error');
+                            
+                            // Focus on input
+                            setTimeout(() => {
+                                pinInput.focus();
+                            }, 100);
+                        } else {
+                            // Too many attempts
+                            document.getElementById('pinModal').style.display = 'none';
+                            document.body.classList.remove('scanner-open');
+                            
+                            this.showToast('Too many incorrect attempts. Please try again later.', 'error');
+                            
+                            // Re-open QR result modal
+                            setTimeout(() => {
+                                document.getElementById('qrResultModal').style.display = 'flex';
+                                document.body.classList.add('scanner-open');
+                            }, 500);
+                        }
+                    } else {
+                        this.showToast(result.error || 'Payment failed', 'error');
+                    }
+                }
+            } catch (error) {
+                this.hideLoading();
+                console.error('Error submitting payment:', error);
+                this.showToast('Payment failed. Please try again.', 'error');
+            }
+        }
+
+        // Utility methods
+        showLoading(message) {
+            const overlay = document.getElementById('loadingOverlay');
+            const text = document.getElementById('loadingText');
+            
+            if (overlay && text) {
+                text.textContent = message || 'Processing...';
+                overlay.style.display = 'flex';
+            }
+        }
+
+        hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
+
+        showToast(message, type = 'info') {
+            const toast = document.getElementById('toastNotification');
+            if (!toast) return;
+            
+            toast.textContent = message;
+            toast.className = 'toast-notification ' + type;
+            toast.style.display = 'flex';
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        showError(message, type = 'error') {
+            this.showToast(message, type);
+        }
+    }
+
+    // File scanning functionality
+    class FileQRScanner {
+        constructor() {
+            this.selectedFile = null;
+            this.enhancedScanner = new EnhancedQRScanner();
+        }
+
+        handleFileSelect(file) {
+            // Validate file type
+            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp'];
+            if (!validTypes.includes(file.type)) {
+                this.enhancedScanner.showToast('Please select a valid image file (PNG, JPG, JPEG, GIF, BMP)', 'error');
+                return false;
+            }
+
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                this.enhancedScanner.showToast('File size must be less than 5MB', 'error');
+                return false;
+            }
+
+            this.selectedFile = file;
+            return true;
+        }
+
+        async scanFile() {
+            if (!this.selectedFile) return false;
+
+            try {
+                this.enhancedScanner.showLoading('Scanning QR code from image...');
+                
+                const formData = new FormData();
+                formData.append('file', this.selectedFile);
+
+                const response = await fetch('/qr/scan/file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                this.enhancedScanner.hideLoading();
+
+                if (result.success) {
+                    // Check for self-scan immediately
+                    const currentUserUPI = '{{ user.upi_id if user and user.upi_id else "" }}'.trim().toLowerCase();
+                    if (result.user && result.user.upi_id && currentUserUPI && 
+                        result.user.upi_id.toLowerCase() === currentUserUPI) {
+                        this.enhancedScanner.showSelfScanError(result.user);
+                        return false;
+                    }
+                    
+                    // Process the scanned data
+                    this.enhancedScanner.scannedData = {
+                        qrData: result.qr_data,
+                        user: result.user,
+                        isRegistered: result.is_registered,
+                        message: result.message
+                    };
+                    
+                    this.enhancedScanner.showResults();
+                    return true;
+                } else {
+                    // Check if it's a pyzbar dependency error
+                    if (result.error && result.error.includes('pyzbar')) {
+                        this.showPyzbarError();
+                        return false;
+                    }
+                    this.enhancedScanner.showToast(result.error || 'Failed to scan QR code', 'error');
+                    return false;
+                }
+            } catch (error) {
+                this.enhancedScanner.hideLoading();
+                console.error('Error scanning file:', error);
+                this.enhancedScanner.showToast('Failed to scan QR code', 'error');
+                return false;
+            }
+        }
+
+        showPyzbarError() {
+            // Show error message about pyzbar
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.8);
+                z-index: 5000;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            `;
+            
+            modal.innerHTML = `
+                <div style="
+                    background: var(--dark-surface);
+                    border-radius: 12px;
+                    padding: 30px;
+                    max-width: 500px;
+                    width: 90%;
+                    text-align: center;
+                ">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 64px; color: var(--warning-color); margin-bottom: 20px;"></i>
+                    <h3 style="margin: 0 0 15px 0; color: var(--dark-text);">QR Scanning Dependency Required</h3>
+                    <p style="color: var(--dark-text-secondary); margin-bottom: 25px;">
+                        The QR scanning functionality requires the <strong>pyzbar</strong> library to be installed on the server.
+                        <br><br>
+                        Please contact the system administrator to install it with:
+                        <br>
+                        <code style="background: var(--dark-bg); padding: 10px; border-radius: 6px; display: block; margin: 10px 0;">
+                            pip install pyzbar pillow
+                        </code>
+                    </p>
+                    <button onclick="this.closest('div').remove()" style="
+                        background: var(--primary-color);
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        cursor: pointer;
+                    ">
+                        Close
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+    }
+
+    // Initialize everything
+    function initQRScanFunctionality() {
+        // Create scanner instances
+        window.enhancedScanner = new EnhancedQRScanner();
+        window.fileScanner = new FileQRScanner();
+        
+        const qrScanTrigger = document.getElementById('qrScanTrigger');
+        const cameraScanner = document.getElementById('cameraScanner');
+        const closeCameraBtn = document.getElementById('closeCameraBtn');
+        const galleryOverlay = document.getElementById('galleryOverlay');
+        const closeGalleryBtn = document.getElementById('closeGalleryBtn');
+        const galleryFileInput = document.getElementById('galleryFileInput');
+        const dropArea = document.getElementById('dropArea');
+        const filePreview = document.getElementById('filePreview');
+        const previewImage = document.getElementById('previewImage');
+        const scanImageBtn = document.getElementById('scanImageBtn');
+        const qrResultModal = document.getElementById('qrResultModal');
+        const closeResultBtn = document.getElementById('closeResultBtn');
+        const proceedToPaymentBtn = document.getElementById('proceedToPaymentBtn');
+        const selfScanModal = document.getElementById('selfScanModal');
+        const scanDifferentBtn = document.getElementById('scanDifferentBtn');
+        const closeSelfScanBtn = document.getElementById('closeSelfScanBtn');
+        const switchCameraBtn = document.getElementById('switchCameraBtn');
+        const flashlightBtn = document.getElementById('flashlightBtn');
+        const galleryBtn = document.getElementById('galleryBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const pinModal = document.getElementById('pinModal');
+        const cancelPinBtn = document.getElementById('cancelPinBtn');
+        
+        // Click handler - open camera scanner directly
+        qrScanTrigger.addEventListener('click', async function(e) {
+            e.preventDefault();
+            
+            // Add scanning animation
+            qrScanTrigger.classList.add('scanning');
+            
+            // Open camera scanner
+            setTimeout(() => {
+                qrScanTrigger.classList.remove('scanning');
+                openCameraScanner();
+            }, 300);
+        });
+        
+        // Camera scanner functions
+        async function openCameraScanner() {
+            cameraScanner.style.display = 'flex';
+            document.body.classList.add('scanner-open');
+            
+            // Start camera
+            const success = await window.enhancedScanner.startCamera();
+            
+            if (!success) {
+                window.enhancedScanner.showToast('Camera access failed. Please use file upload.', 'error');
+            }
+        }
+        
+        function closeCameraScanner() {
+            cameraScanner.style.display = 'none';
+            document.body.classList.remove('scanner-open');
+            window.enhancedScanner.stopCamera();
+        }
+        
+        closeCameraBtn.addEventListener('click', closeCameraScanner);
+        
+        // Switch camera button
+        switchCameraBtn.addEventListener('click', async () => {
+            await window.enhancedScanner.switchCamera();
+        });
+        
+        // Flashlight button
+        flashlightBtn.addEventListener('click', async () => {
+            await window.enhancedScanner.toggleFlashlight();
+        });
+        
+        // Gallery button
+        galleryBtn.addEventListener('click', () => {
+            closeCameraScanner();
+            openGallery();
+        });
+        
+        // Capture button (for PythonAnywhere, we'll use file upload)
+        captureBtn.addEventListener('click', () => {
+            window.enhancedScanner.showToast('For PythonAnywhere, please use file upload option', 'info');
+        });
+        
+        // Gallery functions
+        function openGallery() {
+            closeCameraScanner();
+            galleryOverlay.style.display = 'flex';
+            document.body.classList.add('scanner-open');
+        }
+        
+        function closeGallery() {
+            galleryOverlay.style.display = 'none';
+            document.body.classList.remove('scanner-open');
+            resetGallery();
+        }
+        
+        closeGalleryBtn.addEventListener('click', closeGallery);
+        
+        // File upload handlers
+        dropArea.addEventListener('click', function() {
+            galleryFileInput.click();
+        });
+        
+        galleryFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                if (window.fileScanner.handleFileSelect(file)) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        previewImage.src = event.target.result;
+                        filePreview.style.display = 'block';
+                        scanImageBtn.disabled = false;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+        
+        // Drag and drop handlers
+        dropArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            dropArea.style.borderColor = 'var(--primary-color)';
+            dropArea.style.background = 'rgba(var(--primary-rgb), 0.1)';
+        });
+        
+        dropArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            dropArea.style.borderColor = 'var(--border-color)';
+            dropArea.style.background = '';
+        });
+        
+        dropArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dropArea.style.borderColor = 'var(--border-color)';
+            dropArea.style.background = '';
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                if (window.fileScanner.handleFileSelect(file)) {
+                    galleryFileInput.files = e.dataTransfer.files;
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        previewImage.src = event.target.result;
+                        filePreview.style.display = 'block';
+                        scanImageBtn.disabled = false;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            } else {
+                window.enhancedScanner.showToast('Please select an image file', 'error');
+            }
+        });
+        
+        scanImageBtn.addEventListener('click', async function() {
+            scanImageBtn.disabled = true;
+            scanImageBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning...';
+            
+            const success = await window.fileScanner.scanFile();
+            
+            if (success) {
+                closeGallery();
+            }
+            
+            scanImageBtn.disabled = false;
+            scanImageBtn.innerHTML = '<i class="fas fa-search"></i> Scan QR Code';
+        });
+        
+        // Reset gallery
+        function resetGallery() {
+            galleryFileInput.value = '';
+            previewImage.src = '';
+            filePreview.style.display = 'none';
+            scanImageBtn.disabled = true;
+            window.fileScanner.selectedFile = null;
+        }
+        
+        // QR result modal functions
+        closeResultBtn.addEventListener('click', function() {
+            qrResultModal.style.display = 'none';
+            document.body.classList.remove('scanner-open');
+            window.enhancedScanner.scannedData = null;
+        });
+        
+        // Self scan modal functions
+        scanDifferentBtn.addEventListener('click', function() {
+            selfScanModal.style.display = 'none';
+            document.body.classList.remove('scanner-open');
+            
+            // Re-open camera scanner
+            setTimeout(() => {
+                openCameraScanner();
+            }, 300);
+        });
+        
+        closeSelfScanBtn.addEventListener('click', function() {
+            selfScanModal.style.display = 'none';
+            document.body.classList.remove('scanner-open');
+        });
+        
+        // Close modals on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (cameraScanner.style.display === 'flex') {
+                    closeCameraScanner();
+                } else if (galleryOverlay.style.display === 'flex') {
+                    closeGallery();
+                } else if (qrResultModal.style.display === 'flex') {
+                    qrResultModal.style.display = 'none';
+                    document.body.classList.remove('scanner-open');
+                } else if (pinModal.style.display === 'flex') {
+                    pinModal.style.display = 'none';
+                    document.body.classList.remove('scanner-open');
+                    
+                    // Re-open QR result modal
+                    setTimeout(() => {
+                        qrResultModal.style.display = 'flex';
+                        document.body.classList.add('scanner-open');
+                    }, 300);
+                } else if (selfScanModal.style.display === 'flex') {
+                    selfScanModal.style.display = 'none';
+                    document.body.classList.remove('scanner-open');
+                }
+            }
+        });
+        
+        // Close camera scanner when clicking outside of guide area
+        cameraScanner.addEventListener('click', function(e) {
+            if (e.target === cameraScanner) {
+                closeCameraScanner();
+            }
+        });
+    }
+
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/service-worker.js', { 
+                scope: '/' 
+            })
+            .then(function(registration) {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+    }
+    
+    // Check if running in standalone mode
+    window.addEventListener('DOMContentLoaded', function() {
+        // Add standalone mode class if applicable
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            document.documentElement.classList.add('standalone-mode');
+        }
+        
+        // iOS standalone detection
+        if (window.navigator.standalone === true) {
+            document.documentElement.classList.add('standalone-mode');
+        }
+        
+        // Initialize QR scan functionality
+        initQRScanFunctionality();
+    });
+    
+    // Network status indicator
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    
+    function updateOnlineStatus() {
+        const status = navigator.onLine ? 'online' : 'offline';
+        document.documentElement.setAttribute('data-network', status);
+    }
+    
+    // Initialize network status
+    updateOnlineStatus();
+    
+    // Prevent pull-to-refresh on mobile
+    let touchStartY = 0;
+    document.addEventListener('touchstart', e => {
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    
+    document.addEventListener('touchmove', e => {
+        const touchY = e.touches[0].clientY;
+        const diff = touchY - touchStartY;
+        
+        // If at top of page and pulling down, prevent default
+        if (window.scrollY === 0 && diff > 0) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+    
+    // Prevent zoom on mobile
+    document.addEventListener('touchstart', function(e) {
+        if (e.touches.length > 1) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+    
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
+    
+    // Keyboard handling for PIN inputs
+    document.addEventListener('keydown', function(e) {
+        // Only allow numbers in PIN inputs
+        const pinInputs = document.querySelectorAll('input[type="password"][maxlength="6"]');
+        pinInputs.forEach(input => {
+            if (document.activeElement === input) {
+                if (!/^\d$/.test(e.key) && 
+                    e.key !== 'Backspace' && 
+                    e.key !== 'Tab' && 
+                    e.key !== 'Delete' && 
+                    !e.ctrlKey && 
+                    !e.metaKey) {
+                    e.preventDefault();
+                }
+            }
+        });
+        
+        // Allow only numbers and decimal in amount inputs
+        const amountInputs = document.querySelectorAll('input[type="number"][name="amount"], #qrAmount');
+        amountInputs.forEach(input => {
+            if (document.activeElement === input) {
+                if (!/^[\d.]$/.test(e.key) && 
+                    e.key !== 'Backspace' && 
+                    e.key !== 'Tab' && 
+                    e.key !== 'Delete' && 
+                    e.key !== 'ArrowLeft' && 
+                    e.key !== 'ArrowRight' && 
+                    !e.ctrlKey && 
+                    !e.metaKey) {
+                    e.preventDefault();
+                }
+                
+                // Prevent multiple decimal points
+                if (e.key === '.' && input.value.includes('.')) {
+                    e.preventDefault();
+                }
+            }
+        });
+    });
+    </script>
+    
+    <!-- PWA Install Script -->
+    <script>
+    let deferredPrompt = null;
+    const installContainer = document.getElementById('pwaInstallContainer');
+    const installBtn = document.getElementById('pwaInstallBtn');
+    const dismissBtn = document.getElementById('pwaDismissBtn');
+    
+    // Check if user has dismissed the install prompt before
+    const hasDismissedInstall = localStorage.getItem('pwaInstallDismissed');
+    
+    // Capture install availability
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Only show if user hasn't dismissed it and is authenticated
+        if (!hasDismissedInstall && installContainer) {
+            setTimeout(() => {
+                installContainer.style.display = 'block';
+                console.log('PWA install prompt available - showing button');
+            }, 3000); // Show after 3 seconds
+        }
+    });
+    
+    // Handle install button click
+    installBtn?.addEventListener('click', async () => {
+        if (!deferredPrompt) {
+            console.log('No install prompt available');
+            return;
+        }
+        
+        console.log('Triggering PWA install prompt');
+        deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        console.log('Install choice:', choice.outcome);
+        
+        if (choice.outcome === 'accepted') {
+            console.log('User accepted the install prompt');
+        }
+        
+        deferredPrompt = null;
+        if (installContainer) {
+            installContainer.style.display = 'none';
+        }
+    });
+    
+    // Handle dismiss button click
+    dismissBtn?.addEventListener('click', () => {
+        if (installContainer) {
+            installContainer.style.display = 'none';
+            localStorage.setItem('pwaInstallDismissed', 'true');
+            console.log('User dismissed install prompt');
+        }
+    });
+    
+    // Hide button after installation
+    window.addEventListener('appinstalled', () => {
+        console.log('PWA installed successfully');
+        if (installContainer) {
+            installContainer.style.display = 'none';
+        }
+        deferredPrompt = null;
+        localStorage.setItem('pwaInstallDismissed', 'true');
+    });
+    
+    // Check if already installed
+    window.addEventListener('DOMContentLoaded', () => {
+        if (window.matchMedia('(display-mode: standalone)').matches || 
+            window.navigator.standalone === true) {
+            console.log('App already installed in standalone mode');
+            if (installContainer) {
+                installContainer.style.display = 'none';
+            }
+            localStorage.setItem('pwaInstallDismissed', 'true');
+        }
+    });
+    
+    // Notification badge update function
+    function updateNotificationBadge(count) {
+        const badge = document.getElementById('notification-badge');
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count < 10 ? count : '9+';
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        
+        // Update document title
+        if (count > 0) {
+            document.title = `(${count}) EasyCash - Digital Wallet`;
+        } else {
+            document.title = 'EasyCash - Digital Wallet';
+        }
+    }
+    
+    // Poll for new notifications
+    function pollNotifications() {
+        if (!window.notificationManager) return;
+        
+        // Check every 30 seconds
+        setInterval(() => {
+            window.notificationManager.updateBadge();
+        }, 30000);
+    }
+    
+    // Initialize notification polling
+    window.addEventListener('DOMContentLoaded', () => {
+        pollNotifications();
+    });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

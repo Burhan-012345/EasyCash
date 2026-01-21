@@ -1,0 +1,1241 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="transaction-success-container">
+    <!-- Success Header -->
+    <div class="success-header">
+        <a href="{{ url_for('dashboard') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+        </a>
+        <div class="header-title">
+            <h1>Withdrawal Successful</h1>
+            <p class="subtitle">Your funds are being processed</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-icon" onclick="printReceipt()" title="Print Receipt">
+                <i class="fas fa-print"></i>
+            </button>
+            <button class="btn-icon" onclick="shareReceipt()" title="Share">
+                <i class="fas fa-share-alt"></i>
+            </button>
+            <a href="{{ url_for('view_receipt', transaction_id=transaction.transaction_id) if transaction else '#' }}" 
+               class="btn-icon" 
+               title="View Receipt"
+               {% if not transaction %}style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+                <i class="fas fa-receipt"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Success Status Card -->
+    <div class="status-card processing">
+        <div class="status-icon processing-animation">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="status-content">
+            <h3>Withdrawal Initiated</h3>
+            <p class="status-message">₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }} will be transferred to your bank account</p>
+            <div class="status-note">
+                <i class="fas fa-info-circle"></i>
+                Estimated arrival: 1-2 business days
+            </div>
+            <div class="status-timestamp">
+                <i class="far fa-clock"></i>
+                Initiated: {{ transaction_date.strftime('%d %b %Y at %I:%M %p') }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Timeline -->
+    <div class="timeline-card">
+        <h3><i class="fas fa-shipping-fast"></i> Withdrawal Timeline</h3>
+        <div class="timeline">
+            <div class="timeline-step completed">
+                <div class="step-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="step-content">
+                    <div class="step-title">Request Submitted</div>
+                    <div class="step-time">{{ transaction_date.strftime('%I:%M %p') }}</div>
+                    <div class="step-desc">Your withdrawal request has been received</div>
+                </div>
+            </div>
+            
+            <div class="timeline-step active">
+                <div class="step-icon">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
+                <div class="step-content">
+                    <div class="step-title">Processing</div>
+                    <div class="step-time">Within 2 hours</div>
+                    <div class="step-desc">Verification and approval in progress</div>
+                </div>
+            </div>
+            
+            <div class="timeline-step">
+                <div class="step-icon">
+                    <i class="fas fa-university"></i>
+                </div>
+                <div class="step-content">
+                    <div class="step-title">Bank Transfer</div>
+                    <div class="step-time">1-2 business days</div>
+                    <div class="step-desc">Funds transferred to your bank account</div>
+                </div>
+            </div>
+            
+            <div class="timeline-step">
+                <div class="step-icon">
+                    <i class="fas fa-check-double"></i>
+                </div>
+                <div class="step-content">
+                    <div class="step-title">Completed</div>
+                    <div class="step-time">When received</div>
+                    <div class="step-desc">Funds available in your bank account</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Progress -->
+    <div class="processing-progress">
+        <div class="progress-label">
+            <span>Processing Progress</span>
+            <span id="progressPercent">30% Complete</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
+    <!-- Security Verification -->
+    <div class="security-verification">
+        <h4><i class="fas fa-user-shield"></i> Security Verification</h4>
+        <div class="verification-steps">
+            <div class="verification-step completed">
+                <div class="step-check">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="step-text">Identity Verified</div>
+            </div>
+            <div class="verification-step in-progress">
+                <div class="step-check">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
+                <div class="step-text">Bank Verification</div>
+            </div>
+            <div class="verification-step">
+                <div class="step-check">
+                    <i class="far fa-clock"></i>
+                </div>
+                <div class="step-text">Final Approval</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Summary -->
+    <div class="summary-card">
+        <div class="summary-header">
+            <h3><i class="fas fa-receipt"></i> Transaction Details</h3>
+            <span class="badge badge-processing">PROCESSING</span>
+        </div>
+        
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="item-label">
+                    <i class="fas fa-hashtag"></i> Transaction ID
+                </div>
+                <div class="item-value">
+                    <code>{{ transaction.transaction_id if transaction else 'N/A' }}</code>
+                    <button class="btn-copy" onclick="copyToClipboard('{{ transaction.transaction_id if transaction else "" }}')">
+                        <i class="far fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="item-label">
+                    <i class="fas fa-tag"></i> Reference Number
+                </div>
+                <div class="item-value">
+                    <code>WTH{{ transaction.transaction_id[:9]|upper if transaction else 'N/A' }}</code>
+                </div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="item-label">
+                    <i class="fas fa-money-bill-wave"></i> Amount Withdrawn
+                </div>
+                <div class="item-value amount-negative">
+                    -₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}
+                </div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="item-label">
+                    <i class="fas fa-percentage"></i> Processing Fee
+                </div>
+                <div class="item-value">₹5.00</div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="item-label">
+                    <i class="fas fa-calculator"></i> Net Amount
+                </div>
+                <div class="item-value">
+                    ₹{{ "%.2f"|format(transaction.amount - 5) if transaction else '0.00' }}
+                </div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="item-label">
+                    <i class="fas fa-info-circle"></i> Status
+                </div>
+                <div class="item-value">
+                    <span class="status-badge processing">Processing</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bank Details -->
+    <div class="bank-details-card">
+        <div class="bank-header">
+            <h3><i class="fas fa-university"></i> Bank Account Details</h3>
+            <a href="{{ url_for('profile') }}" class="btn-text">
+                <i class="fas fa-edit"></i>
+                Update
+            </a>
+        </div>
+        
+        <div class="bank-info">
+            <div class="bank-item">
+                <div class="bank-label">Account Holder</div>
+                <div class="bank-value">{{ user.username if user else '' }}</div>
+            </div>
+            <div class="bank-item">
+                <div class="bank-label">Account Number</div>
+                <div class="bank-value">•••• 1234</div>
+            </div>
+            <div class="bank-item">
+                <div class="bank-label">IFSC Code</div>
+                <div class="bank-value">HDFC0001234</div>
+            </div>
+            <div class="bank-item">
+                <div class="bank-label">Bank Name</div>
+                <div class="bank-value">HDFC Bank</div>
+            </div>
+            <div class="bank-item">
+                <div class="bank-label">Account Type</div>
+                <div class="bank-value">Savings Account</div>
+            </div>
+            <div class="bank-item">
+                <div class="bank-label">Branch</div>
+                <div class="bank-value">Mumbai Main Branch</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Balance Update -->
+    <div class="balance-update-card">
+        <div class="balance-header">
+            <h3><i class="fas fa-chart-line"></i> Account Balance</h3>
+        </div>
+        
+        <div class="balance-stats">
+            <div class="stat-item">
+                <div class="stat-label">Previous Balance</div>
+                <div class="stat-value">₹{{ "%.2f"|format(user.balance + transaction.amount) if transaction and user else '0.00' }}</div>
+            </div>
+            
+            <div class="stat-item negative">
+                <div class="stat-label">Amount Withdrawn</div>
+                <div class="stat-value amount-negative">-₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}</div>
+            </div>
+            
+            <div class="stat-item">
+                <div class="stat-label">Processing Fee</div>
+                <div class="stat-value">-₹5.00</div>
+            </div>
+            
+            <div class="stat-item total">
+                <div class="stat-label">Current Balance</div>
+                <div class="stat-value">₹{{ "%.2f"|format(user.balance) if user else '0.00' }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdrawal Alert -->
+    <div class="withdrawal-alert">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div class="withdrawal-alert-content">
+            <h4>Important: Processing Time</h4>
+            <p>Withdrawals typically take 1-2 business days to process. Weekend and holiday transactions may experience additional delays. You will receive an email confirmation once the transfer is complete.</p>
+        </div>
+    </div>
+
+    <!-- Countdown Timer for Cancellation -->
+    <div class="countdown-timer">
+        <h4><i class="fas fa-hourglass-half"></i> Time to Cancel</h4>
+        <div class="timer-display" id="cancelTimer">59:59</div>
+        <div class="timer-label">You can cancel this withdrawal within the next hour</div>
+    </div>
+
+    <!-- Estimated Arrival -->
+    <div class="estimated-arrival">
+        <h4><i class="fas fa-calendar-check"></i> Estimated Arrival</h4>
+        <div class="arrival-date" id="arrivalDate">{{ (transaction_date + timedelta(days=2)).strftime('%A, %d %B %Y') }}</div>
+        <div class="arrival-details" id="arrivalDetails">
+            Funds will be deposited to your bank account by end of day
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions-grid">
+        <a href="{{ url_for('dashboard') }}" class="quick-action">
+            <div class="action-icon">
+                <i class="fas fa-home"></i>
+            </div>
+            <div class="action-text">Dashboard</div>
+        </a>
+        
+        <a href="{{ url_for('withdraw') }}" class="quick-action">
+            <div class="action-icon">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div class="action-text">Withdraw Again</div>
+        </a>
+        
+        <a href="{{ url_for('transactions') }}" class="quick-action">
+            <div class="action-icon">
+                <i class="fas fa-history"></i>
+            </div>
+            <div class="action-text">Track Status</div>
+        </a>
+        
+        <button onclick="downloadReceipt()" class="quick-action">
+            <div class="action-icon">
+                <i class="fas fa-download"></i>
+            </div>
+            <div class="action-text">Download Receipt</div>
+        </button>
+    </div>
+
+    <!-- Cancel Withdrawal Section -->
+    <div class="cancel-withdrawal">
+        <button onclick="cancelWithdrawal()" class="btn-cancel">
+            <i class="fas fa-times-circle"></i>
+            Cancel Withdrawal
+        </button>
+        <p class="cancel-note">
+            <i class="fas fa-info-circle"></i>
+            You can cancel this withdrawal within 1 hour of submission. After that, the processing cannot be stopped.
+        </p>
+    </div>
+
+    <!-- Important Notes -->
+    <div class="notes-card">
+        <div class="notes-header">
+            <i class="fas fa-exclamation-circle"></i>
+            <h4>Important Information</h4>
+        </div>
+        <div class="notes-content">
+            <ul class="notes-list">
+                <li>
+                    <i class="fas fa-clock"></i>
+                    <span>Standard processing time is 1-2 business days</span>
+                </li>
+                <li>
+                    <i class="fas fa-calendar"></i>
+                    <span>Weekend and holiday transfers may be delayed</span>
+                </li>
+                <li>
+                    <i class="fas fa-ban"></i>
+                    <span>You can cancel this withdrawal within 1 hour</span>
+                </li>
+                <li>
+                    <i class="fas fa-phone"></i>
+                    <span>Contact support for urgent withdrawals</span>
+                </li>
+                <li>
+                    <i class="fas fa-envelope"></i>
+                    <span>You'll receive email confirmation at each stage</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Support Options -->
+    <div class="support-actions-enhanced">
+        <button onclick="openLiveChat()" class="btn-live-chat">
+            <i class="fas fa-comments"></i>
+            Live Chat with Support
+        </button>
+        <button onclick="requestExpedite()" class="btn-download-receipt">
+            <i class="fas fa-bolt"></i>
+            Request Expedited Processing
+        </button>
+    </div>
+
+    <!-- Support Card -->
+    <div class="support-card">
+        <div class="support-header">
+            <i class="fas fa-headset"></i>
+            <h4>Need Help?</h4>
+        </div>
+        <div class="support-content">
+            <p>If you have questions about your withdrawal or need to expedite the process:</p>
+            <div class="support-actions">
+                <a href="mailto:support@easycash.com" class="btn-support">
+                    <i class="fas fa-envelope"></i>
+                    Email Support
+                </a>
+                <a href="tel:+911800123456" class="btn-support">
+                    <i class="fas fa-phone"></i>
+                    Call Support
+                </a>
+                <button onclick="openLiveChat()" class="btn-support">
+                    <i class="fas fa-comments"></i>
+                    Live Chat
+                </button>
+                <a href="{{ url_for('profile') }}" class="btn-support">
+                    <i class="fas fa-question-circle"></i>
+                    Help Center
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Next Steps -->
+    <div class="next-steps">
+        <h4>What would you like to do next?</h4>
+        <div class="steps-grid">
+            <a href="{{ url_for('deposit') }}" class="step-card">
+                <div class="step-icon">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <div class="step-content">
+                    <h5>Deposit Funds</h5>
+                    <p>Add more money to your wallet</p>
+                </div>
+                <i class="fas fa-chevron-right step-arrow"></i>
+            </a>
+            
+            <a href="{{ url_for('profile') }}" class="step-card">
+                <div class="step-icon">
+                    <i class="fas fa-user-cog"></i>
+                </div>
+                <div class="step-content">
+                    <h5>Manage Account</h5>
+                    <p>Update bank details and settings</p>
+                </div>
+                <i class="fas fa-chevron-right step-arrow"></i>
+            </a>
+            
+            <a href="{{ url_for('transactions') }}" class="step-card">
+                <div class="step-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="step-content">
+                    <h5>View History</h5>
+                    <p>Check all your transactions</p>
+                </div>
+                <i class="fas fa-chevron-right step-arrow"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show success notification
+    showToast('✅ Withdrawal initiated! ₹{{ "%.2f"|format(transaction.amount) if transaction else "0.00" }} will be transferred soon', 'info');
+    
+    // Start session timer
+    startSessionTimer();
+    
+    // Auto scroll to top
+    window.scrollTo(0, 0);
+    
+    // Initialize timers and animations
+    startCancelTimer();
+    startProgressSimulation();
+    startVerificationSimulation();
+    startTimelineProgress();
+    
+    // Add confetti effect for visual feedback
+    createConfetti();
+});
+
+// Copy to clipboard function
+function copyToClipboard(text) {
+    if (!text) {
+        showToast('No text to copy', 'error');
+        return;
+    }
+    
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Transaction ID copied to clipboard', 'success');
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+        
+        // Fallback method
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showToast('Copied to clipboard', 'success');
+    });
+}
+
+// Download receipt
+function downloadReceipt() {
+    showToast('Generating receipt...', 'info');
+    
+    // Show loading state
+    const downloadBtn = document.querySelector('[onclick="downloadReceipt()"]');
+    const originalText = downloadBtn.innerHTML;
+    downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    downloadBtn.disabled = true;
+    
+    // Use the transaction receipt endpoint
+    const transactionId = '{{ transaction.transaction_id if transaction else "" }}';
+    if (transactionId) {
+        // Use direct URL construction for receipt
+        window.open(`/receipt/${transactionId}?print=true`, '_blank');
+        
+        // Also provide PDF download
+        setTimeout(() => {
+            window.location.href = `/download-transaction/${transactionId}`;
+        }, 1000);
+    } else {
+        // Fallback to transactions page
+        window.location.href = '{{ url_for("transactions") }}';
+    }
+    
+    // Reset button after 3 seconds
+    setTimeout(() => {
+        downloadBtn.innerHTML = originalText;
+        downloadBtn.disabled = false;
+    }, 3000);
+}
+
+// Share receipt
+function shareReceipt() {
+    const shareData = {
+        title: 'EasyCash Withdrawal Receipt',
+        text: `I just withdrew ₹{{ "%.2f"|format(transaction.amount) if transaction else "0.00" }} from my EasyCash wallet. Transaction ID: {{ transaction.transaction_id if transaction else "" }}`,
+        url: window.location.href,
+    };
+    
+    if (navigator.share) {
+        navigator.share(shareData)
+            .then(() => showToast('Receipt shared successfully', 'success'))
+            .catch(error => {
+                if (error.name !== 'AbortError') {
+                    console.error('Share failed:', error);
+                    copyToClipboard(window.location.href);
+                    showToast('Link copied to clipboard', 'info');
+                }
+            });
+    } else {
+        // Fallback for browsers without Web Share API
+        copyToClipboard(window.location.href);
+        showToast('Receipt link copied to clipboard', 'info');
+    }
+}
+
+// Print receipt
+function printReceipt() {
+    showToast('Opening receipt for printing...', 'info');
+    
+    const transactionId = '{{ transaction.transaction_id if transaction else "" }}';
+    if (transactionId) {
+        // Open receipt page in a new window with print dialog
+        const printWindow = window.open(`/receipt/${transactionId}?print=true`, '_blank', 'width=800,height=900');
+        
+        // Wait for window to load then print
+        if (printWindow) {
+            printWindow.onload = function() {
+                setTimeout(() => {
+                    printWindow.print();
+                }, 1000);
+            };
+        }
+    } else {
+        // Fallback: print current page
+        window.print();
+    }
+}
+
+// Countdown timer for cancellation
+function startCancelTimer() {
+    let timeLeft = 59 * 60 + 59; // 59 minutes, 59 seconds
+    
+    const timerElement = document.getElementById('cancelTimer');
+    if (!timerElement) return;
+    
+    const timerInterval = setInterval(() => {
+        timeLeft--;
+        
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        
+        timerElement.textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Change color as time runs low
+        if (timeLeft < 300) { // 5 minutes
+            timerElement.style.color = '#ea4335';
+        } else if (timeLeft < 900) { // 15 minutes
+            timerElement.style.color = '#fbbc04';
+        }
+        
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            document.querySelector('.countdown-timer').innerHTML = `
+                <h4><i class="fas fa-ban"></i> Cancellation Period Expired</h4>
+                <div class="timer-display" style="color: #666;">00:00</div>
+                <div class="timer-label">Cancellation is no longer available</div>
+            `;
+            
+            // Hide cancel button
+            const cancelSection = document.querySelector('.cancel-withdrawal');
+            if (cancelSection) {
+                cancelSection.style.display = 'none';
+            }
+            
+            showToast('Cancellation period has expired', 'warning');
+        }
+    }, 1000);
+}
+
+// Progress simulation
+function startProgressSimulation() {
+    let progress = 30;
+    const progressFill = document.getElementById('progressFill');
+    const progressPercent = document.getElementById('progressPercent');
+    
+    if (!progressFill || !progressPercent) return;
+    
+    const progressInterval = setInterval(() => {
+        progress += Math.random() * 5; // Random progress increment
+        
+        if (progress > 100) {
+            progress = 100;
+            clearInterval(progressInterval);
+            
+            // Update status when complete
+            setTimeout(() => {
+                const statusBadge = document.querySelector('.status-badge');
+                const summaryBadge = document.querySelector('.badge');
+                if (statusBadge && summaryBadge) {
+                    statusBadge.textContent = 'Completed';
+                    statusBadge.className = 'status-badge success';
+                    summaryBadge.textContent = 'COMPLETED';
+                    summaryBadge.className = 'badge badge-success';
+                }
+                showToast('Withdrawal processing complete!', 'success');
+            }, 1000);
+        }
+        
+        progressFill.style.width = `${progress}%`;
+        progressPercent.textContent = `${Math.round(progress)}% Complete`;
+    }, 3000); // Update every 3 seconds
+}
+
+// Security verification simulation
+function startVerificationSimulation() {
+    const steps = document.querySelectorAll('.verification-step');
+    if (steps.length === 0) return;
+    
+    let currentStep = 1;
+    
+    const verificationInterval = setInterval(() => {
+        if (currentStep < steps.length) {
+            steps[currentStep].classList.add('completed');
+            steps[currentStep].classList.remove('in-progress');
+            
+            if (currentStep + 1 < steps.length) {
+                steps[currentStep + 1].classList.add('in-progress');
+            }
+            
+            currentStep++;
+            
+            if (currentStep >= steps.length) {
+                clearInterval(verificationInterval);
+                // Update status to verified
+                const statusBadge = document.querySelector('.status-badge');
+                if (statusBadge) {
+                    statusBadge.textContent = 'Verified';
+                    statusBadge.className = 'status-badge success';
+                }
+            }
+        }
+    }, 7000); // Update every 7 seconds
+}
+
+// Timeline progress
+function startTimelineProgress() {
+    const steps = document.querySelectorAll('.timeline-step');
+    if (steps.length === 0) return;
+    
+    let currentStep = 1;
+    
+    const timelineInterval = setInterval(() => {
+        if (currentStep < steps.length) {
+            steps[currentStep - 1].classList.remove('active');
+            steps[currentStep - 1].classList.add('completed');
+            
+            steps[currentStep].classList.add('active');
+            
+            currentStep++;
+            
+            if (currentStep >= steps.length) {
+                clearInterval(timelineInterval);
+            }
+        }
+    }, 10000); // Update every 10 seconds
+}
+
+// Cancel withdrawal
+function cancelWithdrawal() {
+    if (!confirm('Are you sure you want to cancel this withdrawal? This action cannot be undone and any processing fees are non-refundable.')) {
+        return;
+    }
+    
+    showToast('Cancelling withdrawal...', 'info');
+    
+    // Show loading state
+    const cancelBtn = document.querySelector('.btn-cancel');
+    const originalText = cancelBtn.innerHTML;
+    cancelBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cancelling...';
+    cancelBtn.disabled = true;
+    
+    // Simulate API call
+    setTimeout(() => {
+        showToast('Withdrawal cancelled successfully. Funds returned to your wallet.', 'success');
+        
+        // Update UI
+        const statusBadge = document.querySelector('.status-badge');
+        const summaryBadge = document.querySelector('.badge');
+        if (statusBadge && summaryBadge) {
+            statusBadge.textContent = 'Cancelled';
+            statusBadge.className = 'status-badge cancelled';
+            summaryBadge.textContent = 'CANCELLED';
+            summaryBadge.className = 'badge badge-cancelled';
+        }
+        
+        // Update status card
+        const statusCard = document.querySelector('.status-card');
+        if (statusCard) {
+            statusCard.classList.remove('processing');
+            statusCard.classList.add('cancelled');
+            statusCard.querySelector('.status-icon').innerHTML = '<i class="fas fa-ban"></i>';
+            statusCard.querySelector('.status-content h3').textContent = 'Withdrawal Cancelled';
+            statusCard.querySelector('.status-message').textContent = 'Funds have been returned to your wallet';
+            statusCard.querySelector('.status-note').style.display = 'none';
+        }
+        
+        // Hide cancel button
+        document.querySelector('.cancel-withdrawal').style.display = 'none';
+        
+        // Stop all timers
+        clearAllIntervals();
+        
+        // Redirect after delay
+        setTimeout(() => {
+            window.location.href = '{{ url_for("dashboard") }}';
+        }, 3000);
+    }, 2000);
+}
+
+// Expedited processing request
+function requestExpedite() {
+    if (confirm('Expedited processing is available for an additional fee of ₹50. This guarantees same-day transfer. Would you like to proceed?')) {
+        showToast('Requesting expedited processing...', 'info');
+        
+        // Show loading state
+        const expediteBtn = document.querySelector('[onclick="requestExpedite()"]');
+        const originalText = expediteBtn.innerHTML;
+        expediteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        expediteBtn.disabled = true;
+        
+        // Simulate API call
+        setTimeout(() => {
+            showToast('Expedited processing requested! Additional fee will be deducted.', 'success');
+            
+            // Update UI
+            const arrivalDate = document.getElementById('arrivalDate');
+            const arrivalDetails = document.getElementById('arrivalDetails');
+            if (arrivalDate && arrivalDetails) {
+                const today = new Date();
+                arrivalDate.textContent = today.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                arrivalDetails.textContent = 'Expedited: Funds will arrive by end of today';
+            }
+            
+            // Update net amount
+            const netAmount = document.querySelector('.summary-item:nth-child(5) .item-value');
+            if (netAmount) {
+                const currentAmount = parseFloat(netAmount.textContent.replace('₹', ''));
+                netAmount.textContent = `₹${(currentAmount - 50).toFixed(2)}`;
+            }
+            
+            // Update processing time estimate
+            const timelineStep = document.querySelector('.timeline-step:nth-child(3) .step-time');
+            if (timelineStep) {
+                timelineStep.textContent = 'Same day';
+            }
+            
+            // Reset button
+            expediteBtn.innerHTML = originalText;
+            expediteBtn.disabled = false;
+            expediteBtn.textContent = 'Expedited Processing Requested';
+            expediteBtn.style.background = 'linear-gradient(135deg, #34a853, #2e7d32)';
+            expediteBtn.disabled = true;
+        }, 1500);
+    }
+}
+
+// Open live chat
+function openLiveChat() {
+    showToast('Opening live chat...', 'info');
+    
+    // Simulate chat opening
+    setTimeout(() => {
+        const chatWindow = window.open('', '_blank', 'width=400,height=600');
+        if (chatWindow) {
+            chatWindow.document.write(`
+                <html>
+                <head>
+                    <title>EasyCash Support Chat</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        .chat-container { max-width: 400px; margin: 0 auto; }
+                        .chat-header { background: #1a73e8; color: white; padding: 15px; border-radius: 8px 8px 0 0; }
+                        .chat-messages { height: 400px; overflow-y: auto; padding: 15px; background: #f5f5f5; }
+                        .message { margin-bottom: 10px; padding: 10px; border-radius: 8px; }
+                        .user-message { background: #e3f2fd; margin-left: 20px; }
+                        .bot-message { background: white; margin-right: 20px; }
+                        .chat-input { display: flex; padding: 10px; background: white; border-top: 1px solid #ddd; }
+                        .chat-input input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+                        .chat-input button { margin-left: 10px; padding: 10px 20px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; }
+                    </style>
+                </head>
+                <body>
+                    <div class="chat-container">
+                        <div class="chat-header">
+                            <h3>EasyCash Support</h3>
+                            <p>We're here to help with your withdrawal</p>
+                        </div>
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="message bot-message">
+                                <strong>Support Agent:</strong> Hello! How can I help you with your withdrawal today?
+                            </div>
+                        </div>
+                        <div class="chat-input">
+                            <input type="text" id="messageInput" placeholder="Type your message...">
+                            <button onclick="sendMessage()">Send</button>
+                        </div>
+                    </div>
+                    <script>
+                        function sendMessage() {
+                            const input = document.getElementById('messageInput');
+                            const message = input.value.trim();
+                            if (!message) return;
+                            
+                            const messages = document.getElementById('chatMessages');
+                            messages.innerHTML += \`
+                                <div class="message user-message">
+                                    <strong>You:</strong> \${message}
+                                </div>
+                            \`;
+                            
+                            input.value = '';
+                            messages.scrollTop = messages.scrollHeight;
+                            
+                            // Auto reply
+                            setTimeout(() => {
+                                messages.innerHTML += \`
+                                    <div class="message bot-message">
+                                        <strong>Support Agent:</strong> I understand your concern. Let me check the status of your withdrawal.
+                                    </div>
+                                \`;
+                                messages.scrollTop = messages.scrollHeight;
+                            }, 1000);
+                        }
+                        
+                        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+                            if (e.key === 'Enter') sendMessage();
+                        });
+                    <\/script>
+                </body>
+                </html>
+            `);
+            chatWindow.document.close();
+        }
+    }, 500);
+}
+
+// Create confetti effect
+function createConfetti() {
+    const colors = ['#1a73e8', '#34a853', '#fbbc04', '#ea4335'];
+    
+    for (let i = 0; i < 30; i++) {
+        setTimeout(() => {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + 'vw';
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.width = Math.random() * 10 + 5 + 'px';
+            confetti.style.height = Math.random() * 10 + 5 + 'px';
+            confetti.style.position = 'fixed';
+            confetti.style.top = '-10px';
+            confetti.style.zIndex = '9999';
+            confetti.style.borderRadius = '50%';
+            document.body.appendChild(confetti);
+            
+            // Animation
+            confetti.animate([
+                { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+                { transform: \`translateY(\${window.innerHeight}px) rotate(\${360}deg)\`, opacity: 0 }
+            ], {
+                duration: Math.random() * 3000 + 2000,
+                easing: 'cubic-bezier(0.215, 0.610, 0.355, 1)'
+            }).onfinish = () => confetti.remove();
+            
+            setTimeout(() => confetti.remove(), 5000);
+        }, i * 100);
+    }
+}
+
+// Clear all intervals (for cancellation)
+function clearAllIntervals() {
+    // This is a simple implementation - in production, you'd track interval IDs
+    const highestIntervalId = setInterval(() => {}, 0);
+    for (let i = 1; i < highestIntervalId; i++) {
+        clearInterval(i);
+    }
+}
+
+// Toast notification function (if not already defined)
+function showToast(message, type = 'info') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = \`
+        <div class="toast-content">
+            <i class="fas fa-\${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>\${message}</span>
+        </div>
+    \`;
+    
+    // Add to body
+    document.body.appendChild(toast);
+    
+    // Show with animation
+    setTimeout(() => toast.classList.add('show'), 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+</script>
+
+<style>
+/* Confetti animation */
+@keyframes confettiFall {
+    0% {
+        transform: translateY(-100px) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+.confetti {
+    animation: confettiFall 5s linear forwards;
+}
+
+/* Additional styles for cancelled state */
+.status-card.cancelled {
+    background: linear-gradient(135deg, rgba(234, 67, 53, 0.15), rgba(198, 40, 40, 0.1));
+    border: 1px solid rgba(234, 67, 53, 0.3);
+}
+
+.status-card.cancelled .status-icon {
+    background: rgba(234, 67, 53, 0.2);
+    color: #ea4335;
+}
+
+.badge-cancelled {
+    background: rgba(234, 67, 53, 0.2);
+    color: #ea4335;
+    border: 1px solid rgba(234, 67, 53, 0.3);
+}
+
+/* Enhanced support actions */
+.support-actions-enhanced {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+@media (min-width: 768px) {
+    .support-actions-enhanced {
+        flex-direction: row;
+    }
+    
+    .support-actions-enhanced button {
+        flex: 1;
+    }
+}
+
+/* Toast styles */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    z-index: 10000;
+    transform: translateX(150%);
+    transition: transform 0.3s ease;
+    max-width: 350px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.toast.show {
+    transform: translateX(0);
+}
+
+.toast-success {
+    background: #34a853;
+    border-left: 4px solid #2e7d32;
+}
+
+.toast-error {
+    background: #ea4335;
+    border-left: 4px solid #d32f2f;
+}
+
+.toast-info {
+    background: #1a73e8;
+    border-left: 4px solid #0d47a1;
+}
+
+.toast-warning {
+    background: #fbbc04;
+    border-left: 4px solid #f57c00;
+    color: #333;
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.toast-content i {
+    font-size: 1.2rem;
+}
+
+/* Responsive improvements */
+@media (max-width: 480px) {
+    .success-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .header-actions {
+        margin-top: 1rem;
+    }
+    
+    .bank-info {
+        grid-template-columns: 1fr;
+    }
+    
+    .steps-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .support-actions {
+        flex-direction: column;
+    }
+    
+    .support-actions .btn-support {
+        justify-content: center;
+    }
+    
+    .toast {
+        left: 20px;
+        right: 20px;
+        max-width: none;
+        transform: translateY(-100%);
+    }
+    
+    .toast.show {
+        transform: translateY(0);
+    }
+}
+
+/* Print styles */
+@media print {
+    .transaction-success-container {
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+    
+    .btn-back,
+    .header-actions,
+    .quick-actions-grid,
+    .cancel-withdrawal,
+    .support-actions-enhanced,
+    .support-card,
+    .next-steps {
+        display: none !important;
+    }
+    
+    .status-card,
+    .timeline-card,
+    .summary-card,
+    .bank-details-card,
+    .balance-update-card,
+    .withdrawal-alert,
+    .countdown-timer,
+    .estimated-arrival,
+    .notes-card {
+        box-shadow: none !important;
+        border: 1px solid #000 !important;
+        page-break-inside: avoid;
+    }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+    .processing-animation::after,
+    .progress-fill,
+    .confetti {
+        animation: none !important;
+    }
+}
+
+/* Dark mode print optimization */
+@media print and (prefers-color-scheme: dark) {
+    .receipt-container {
+        background: white !important;
+        color: black !important;
+    }
+    
+    .status-card,
+    .summary-card,
+    .bank-details-card {
+        background: #f8f9fa !important;
+        color: black !important;
+    }
+    
+    .detail-row,
+    .account-row,
+    .bank-row,
+    .balance-row {
+        background: #e9ecef !important;
+    }
+}
+
+/* Base styles (add these if not in your base.css) */
+.transaction-success-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.success-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.btn-back {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    color: #495057;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+    background: #e9ecef;
+    border-color: #ced4da;
+}
+
+.header-title {
+    text-align: center;
+    flex: 1;
+}
+
+.header-title h1 {
+    margin: 0;
+    color: #212529;
+    font-size: 2rem;
+}
+
+.subtitle {
+    margin: 0.5rem 0 0 0;
+    color: #6c757d;
+    font-size: 1rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-icon {
+    width: 44px;
+    height: 44px;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #495057;
+    transition: all 0.3s ease;
+}
+
+.btn-icon:hover {
+    background: #f8f9fa;
+    border-color: #adb5bd;
+    transform: translateY(-2px);
+}
+
+.btn-icon a {
+    color: #495057;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+</style>
+{% endblock %}

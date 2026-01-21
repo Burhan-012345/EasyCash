@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyCash - Enter PIN</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #121212;
+            color: #ffffff;
+            min-height: 100vh;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .auth-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            background: #121212;
+        }
+
+        .app-header {
+            text-align: center;
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .app-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .app-logo i {
+            font-size: 42px;
+            color: #1a73e8;
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .app-logo h1 {
+            font-size: 32px;
+            color: white;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .auth-subtitle {
+            color: #b0b0b0;
+            margin-bottom: 5px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        /* Phone display card */
+        .phone-display-card {
+            background: #2d2d2d;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 20px 0;
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid #3a3a3a;
+        }
+
+        .phone-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .phone-info i {
+            color: #1a73e8;
+            font-size: 20px;
+        }
+
+        .phone-number {
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .phone-number:hover {
+            color: #1a73e8;
+        }
+
+        .btn-add-account {
+            background: transparent;
+            border: 1px solid #444;
+            color: #b0b0b0;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-add-account:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border-color: #1a73e8;
+        }
+
+        .auth-card {
+            background: #1e1e1e;
+            border-radius: 16px;
+            padding: 40px 30px;
+            margin-bottom: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .auth-card h2 {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .auth-card p {
+            color: #b0b0b0;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .error-message {
+            background: rgba(234, 67, 53, 0.1);
+            color: #ea4335;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(234, 67, 53, 0.3);
+            text-align: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .success-message {
+            background: rgba(52, 168, 83, 0.1);
+            color: #34a853;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(52, 168, 83, 0.3);
+            text-align: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* Fixed keypad styles matching the image */
+        .keypad-fixed {
+            width: 100%;
+            max-width: 320px;
+            margin: 40px auto;
+            padding: 0;
+            background: transparent;
+        }
+
+        .keypad-row-fixed {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+
+        .keypad-btn-fixed {
+            flex: 1;
+            height: 70px;
+            background: #2d2d2d;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 28px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            user-select: none;
+        }
+
+        .keypad-btn-fixed:hover {
+            background: #3a3a3a;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .keypad-btn-fixed:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .special-btn {
+            font-size: 20px;
+            color: #1a73e8;
+        }
+
+        /* Pin display adjustments */
+        .pin-display {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0 10px;
+        }
+
+        .pin-dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #2d2d2d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 500;
+            transition: all 0.3s;
+            color: #1a73e8;
+        }
+
+        .pin-dot.filled {
+            background: #1a73e8;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .btn-text {
+            background: transparent;
+            border: none;
+            color: #1a73e8;
+            padding: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.3s ease;
+        }
+
+        .btn-text:hover {
+            color: #4285f4;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            margin-top: 8px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-actions {
+            width: 100%;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        @keyframes successPulse {
+            0%, 100% { 
+                background-color: #1a73e8;
+                transform: scale(1);
+            }
+            50% { 
+                background-color: #34a853;
+                transform: scale(1.15);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .pin-input-container {
+            margin: 30px 0;
+        }
+
+        /* Auto-submit indicator */
+        .auto-submit-indicator {
+            text-align: center;
+            margin: 15px 0;
+            color: #34a853;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .auto-submit-indicator.visible {
+            opacity: 1;
+        }
+
+        .countdown {
+            font-weight: bold;
+            color: #1a73e8;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 480px) {
+            .auth-container {
+                padding: 16px;
+            }
+            
+            .auth-card {
+                padding: 30px 20px;
+            }
+            
+            .app-logo h1 {
+                font-size: 28px;
+            }
+            
+            .phone-display-card {
+                padding: 14px;
+            }
+            
+            .phone-number {
+                font-size: 14px;
+            }
+            
+            .btn-add-account {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            
+            .keypad-btn-fixed {
+                height: 60px;
+                font-size: 24px;
+            }
+            
+            .pin-dot {
+                width: 20px;
+                height: 20px;
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .keypad-btn-fixed {
+                height: 56px;
+                font-size: 22px;
+            }
+            
+            .pin-dot {
+                width: 18px;
+                height: 18px;
+                font-size: 14px;
+            }
+            
+            .auth-card {
+                padding: 24px 16px;
+            }
+            
+            .phone-display-card {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+            
+            .phone-info {
+                justify-content: center;
+                width: 100%;
+            }
+        }
+
+        .session-debug {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            max-width: 300px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="app-header">
+            <div class="app-logo">
+                <i class="fas fa-wallet"></i>
+                <h1>EasyCash</h1>
+            </div>
+            <p class="auth-subtitle">Welcome back to your account</p>
+            
+            <!-- Phone display with add account button -->
+            <div class="phone-display-card">
+                <div class="phone-info">
+                    <i class="fas fa-mobile-alt"></i>
+                    <span class="phone-number" id="phoneDisplay" title="Click to reveal full number">
+                        {% if phone %}
+                            +91 {{ phone[:3] }}****{{ phone[-3:] }}
+                        {% else %}
+                            Loading...
+                        {% endif %}
+                    </span>
+                </div>
+                <button type="button" 
+                        class="btn-add-account" 
+                        onclick="window.location.href='/switch-account'">
+                    <i class="fas fa-plus"></i> Switch Account
+                </button>
+            </div>
+        </div>
+        
+        <div class="auth-card">
+            <h2>Enter PIN</h2>
+            <p>Enter your 6-digit PIN to continue</p>
+            
+            {% if error %}
+            <div class="error-message" id="errorMessage">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="errorText">{{ error }}</span>
+            </div>
+            {% else %}
+            <div class="error-message" id="errorMessage" style="display: none;">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="errorText">Incorrect PIN. Please try again.</span>
+            </div>
+            {% endif %}
+            
+            <div class="success-message" id="successMessage" style="display: none;">
+                <i class="fas fa-check-circle"></i>
+                <span id="successText">PIN verified! Redirecting...</span>
+            </div>
+            
+            <!-- Auto-submit indicator -->
+            <div class="auto-submit-indicator" id="autoSubmitIndicator">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Verifying in <span class="countdown" id="countdown">1</span>s...</span>
+            </div>
+            
+            <form method="POST" class="auth-form" id="pinForm" action="/pin-entry">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+                
+                <div class="pin-input-container">
+                    <div class="pin-display" id="pinDisplay">
+                        <span class="pin-dot" data-index="0"></span>
+                        <span class="pin-dot" data-index="1"></span>
+                        <span class="pin-dot" data-index="2"></span>
+                        <span class="pin-dot" data-index="3"></span>
+                        <span class="pin-dot" data-index="4"></span>
+                        <span class="pin-dot" data-index="5"></span>
+                        <input type="password" 
+                               id="pin" 
+                               name="pin" 
+                               maxlength="6" 
+                               pattern="\d{6}"
+                               required
+                               autocomplete="current-password"
+                               style="opacity: 0; position: absolute; left: -9999px;">
+                    </div>
+                    
+                    <div style="text-align: center; margin: 30px 0 40px;">
+                        <button type="button" id="togglePin" class="btn-text">
+                            <i class="fas fa-eye"></i> <span>Show PIN</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Keypad matching the image -->
+                <div class="keypad-fixed">
+                    <div class="keypad-row-fixed">
+                        <button type="button" class="keypad-btn-fixed" data-number="1">1</button>
+                        <button type="button" class="keypad-btn-fixed" data-number="2">2</button>
+                        <button type="button" class="keypad-btn-fixed" data-number="3">3</button>
+                    </div>
+                    <div class="keypad-row-fixed">
+                        <button type="button" class="keypad-btn-fixed" data-number="4">4</button>
+                        <button type="button" class="keypad-btn-fixed" data-number="5">5</button>
+                        <button type="button" class="keypad-btn-fixed" data-number="6">6</button>
+                    </div>
+                    <div class="keypad-row-fixed">
+                        <button type="button" class="keypad-btn-fixed" data-number="7">7</button>
+                        <button type="button" class="keypad-btn-fixed" data-number="8">8</button>
+                        <button type="button" class="keypad-btn-fixed" data-number="9">9</button>
+                    </div>
+                    <div class="keypad-row-fixed">
+                        <button type="button" class="keypad-btn-fixed special-btn" id="clearBtn">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        <button type="button" class="keypad-btn-fixed" data-number="0">0</button>
+                        <button type="button" class="keypad-btn-fixed special-btn" id="backBtn">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-actions" style="margin-top: 40px;">
+                    <button type="submit" class="btn-primary" id="unlockBtn" style="margin-bottom: 15px;">
+                        <i class="fas fa-unlock" style="margin-right: 8px;"></i> Unlock
+                    </button>
+                    <a href="/switch-account" class="btn-text" style="display: block; text-align: center; padding: 12px;">
+                        <i class="fas fa-user"></i> Switch Account
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Session Debug Info (remove in production) -->
+    <div class="session-debug" id="sessionDebug">
+        <strong>Session Debug:</strong><br>
+        <span id="debugInfo">Loading...</span>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const pinInput = document.getElementById('pin');
+    const pinDots = document.querySelectorAll('#pinDisplay .pin-dot');
+    const keypadButtons = document.querySelectorAll('.keypad-btn-fixed[data-number]');
+    const toggleBtn = document.getElementById('togglePin');
+    const clearBtn = document.getElementById('clearBtn');
+    const backBtn = document.getElementById('backBtn');
+    const form = document.getElementById('pinForm');
+    const unlockBtn = document.getElementById('unlockBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    const successMessage = document.getElementById('successMessage');
+    const errorText = document.getElementById('errorText');
+    const successText = document.getElementById('successText');
+    const autoSubmitIndicator = document.getElementById('autoSubmitIndicator');
+    const countdownElement = document.getElementById('countdown');
+    const phoneDisplay = document.getElementById('phoneDisplay');
+    const sessionDebug = document.getElementById('sessionDebug');
+    const debugInfo = document.getElementById('debugInfo');
+    
+    let showPin = false;
+    let isAutoSubmitting = false;
+    let autoSubmitTimeout = null;
+    let countdownInterval = null;
+    let isSubmitting = false;
+    
+    // Check for returning user on page load
+    window.currentPhone = "{{ phone if phone else '' }}";
+    
+    if (!window.currentPhone || window.currentPhone === 'Loading...') {
+        // Try to get phone from localStorage
+        const lastPhone = localStorage.getItem('easycash_last_phone');
+        if (lastPhone && lastPhone.length === 10) {
+            console.log('Found stored phone for returning user:', lastPhone);
+            
+            // Check if this phone exists by making an API call
+            checkPhoneExists(lastPhone).then(exists => {
+                if (exists) {
+                    // Redirect to PIN entry with this phone
+                    window.location.href = '/pin-entry?phone=' + lastPhone;
+                }
+            }).catch(err => {
+                console.log('Error checking phone:', err);
+            });
+        }
+    }
+    
+    // Function to check if phone exists
+    async function checkPhoneExists(phone) {
+        try {
+            const response = await fetch('/api/check-phone?phone=' + phone);
+            const data = await response.json();
+            return data.exists === true;
+        } catch (error) {
+            console.error('Error checking phone:', error);
+            return false;
+        }
+    }
+    
+    // Enable session debug on shift+ctrl+D
+    document.addEventListener('keydown', function(e) {
+        if (e.shiftKey && e.ctrlKey && e.key === 'D') {
+            sessionDebug.style.display = sessionDebug.style.display === 'block' ? 'none' : 'block';
+        }
+    });
+    
+    // Update debug info
+    function updateDebugInfo() {
+        const info = `PIN Length: ${pinInput.value.length}<br>
+                     Auto-submitting: ${isAutoSubmitting}<br>
+                     Is submitting: ${isSubmitting}<br>
+                     Phone: {{ phone if phone else 'N/A' }}<br>
+                     Last Phone: ${localStorage.getItem('easycash_last_phone') || 'None'}<br>
+                     Session Phone: ${sessionStorage.getItem('session_phone') || 'None'}`;
+        debugInfo.innerHTML = info;
+    }
+    
+    // Update debug info every second
+    setInterval(updateDebugInfo, 1000);
+    
+    // Display full phone number on click
+    phoneDisplay.addEventListener('click', function() {
+        const phone = "{{ phone if phone else '' }}";
+        if (phone) {
+            const isMasked = this.textContent.includes('****');
+            this.textContent = isMasked ? `+91 ${phone}` : `+91 ${phone.slice(0, 3)}****${phone.slice(-3)}`;
+        }
+    });
+    
+    // Function to update pin dots with visual feedback
+    function updatePinDots() {
+        const value = pinInput.value;
+        pinDots.forEach((dot, index) => {
+            if (index < value.length) {
+                dot.textContent = showPin ? value[index] : '•';
+                dot.classList.add('filled');
+                
+                // Add bounce animation for each new digit
+                if (index === value.length - 1) {
+                    dot.style.animation = 'bounce 0.3s';
+                    setTimeout(() => {
+                        dot.style.animation = '';
+                    }, 300);
+                }
+            } else {
+                dot.textContent = '';
+                dot.classList.remove('filled');
+            }
+        });
+        
+        // Visual feedback when PIN is complete
+        if (value.length === 6) {
+            pinDots.forEach(dot => {
+                if (dot.classList.contains('filled')) {
+                    // Start success pulse animation
+                    dot.style.animation = 'successPulse 0.8s ease-in-out';
+                }
+            });
+            
+            // Show auto-submit indicator
+            autoSubmitIndicator.classList.add('visible');
+            
+            // Start countdown
+            startCountdown();
+            
+            // Auto-submit after 1 second
+            if (!isAutoSubmitting) {
+                isAutoSubmitting = true;
+                
+                // Clear any existing timeout
+                if (autoSubmitTimeout) {
+                    clearTimeout(autoSubmitTimeout);
+                }
+                
+                autoSubmitTimeout = setTimeout(() => {
+                    submitForm();
+                }, 1000);
+            }
+        } else {
+            // Reset animations
+            pinDots.forEach(dot => {
+                if (dot.classList.contains('filled')) {
+                    dot.style.animation = '';
+                }
+            });
+            
+            // Hide auto-submit indicator
+            autoSubmitIndicator.classList.remove('visible');
+            stopCountdown();
+            
+            // Cancel auto-submit if user continues typing
+            if (isAutoSubmitting) {
+                isAutoSubmitting = false;
+                if (autoSubmitTimeout) {
+                    clearTimeout(autoSubmitTimeout);
+                    autoSubmitTimeout = null;
+                }
+            }
+        }
+        
+        updateDebugInfo();
+    }
+    
+    // Handle keypad input
+    keypadButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            if (pinInput.value.length < 6) {
+                // Add button press animation
+                button.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    button.style.transform = '';
+                }, 150);
+                
+                pinInput.value += button.dataset.number;
+                updatePinDots();
+                hideError();
+                
+                // Play key sound
+                playKeySound();
+            }
+        });
+    });
+    
+    // Clear button
+    clearBtn.addEventListener('click', () => {
+        pinInput.value = '';
+        updatePinDots();
+        hideError();
+        resetAutoSubmit();
+        playKeySound();
+    });
+    
+    // Back button
+    backBtn.addEventListener('click', () => {
+        if (pinInput.value.length > 0) {
+            pinInput.value = pinInput.value.slice(0, -1);
+            updatePinDots();
+            hideError();
+            resetAutoSubmit();
+            playKeySound();
+        }
+    });
+    
+    // Toggle PIN visibility
+    toggleBtn.addEventListener('click', () => {
+        showPin = !showPin;
+        const icon = toggleBtn.querySelector('i');
+        const text = toggleBtn.querySelector('span');
+        
+        if (showPin) {
+            icon.className = 'fas fa-eye-slash';
+            text.textContent = ' Hide PIN';
+        } else {
+            icon.className = 'fas fa-eye';
+            text.textContent = ' Show PIN';
+        }
+        
+        updatePinDots();
+    });
+    
+    // Countdown functions
+    function startCountdown() {
+        stopCountdown();
+        let count = 1;
+        countdownElement.textContent = count;
+        
+        countdownInterval = setInterval(() => {
+            count--;
+            if (count >= 0) {
+                countdownElement.textContent = count;
+            } else {
+                stopCountdown();
+            }
+        }, 1000);
+    }
+    
+    function stopCountdown() {
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+    }
+    
+    // Reset auto-submit state
+    function resetAutoSubmit() {
+        isAutoSubmitting = false;
+        stopCountdown();
+        
+        if (autoSubmitTimeout) {
+            clearTimeout(autoSubmitTimeout);
+            autoSubmitTimeout = null;
+        }
+        autoSubmitIndicator.classList.remove('visible');
+        
+        updateDebugInfo();
+    }
+    
+    // Form submission function
+    async function submitForm() {
+        if (pinInput.value.length !== 6) {
+            showError('Please enter a 6-digit PIN');
+            return;
+        }
+        
+        // Prevent multiple submissions
+        if (isSubmitting) {
+            return;
+        }
+        
+        isSubmitting = true;
+        
+        // Show success message
+        hideError();
+        successMessage.style.display = 'flex';
+        successText.textContent = 'Verifying PIN...';
+        
+        // Visual feedback
+        unlockBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i> Verifying...';
+        unlockBtn.disabled = true;
+        
+        // Add loading state to pin dots
+        pinDots.forEach(dot => {
+            if (dot.classList.contains('filled')) {
+                dot.style.animation = 'pulse 0.6s infinite';
+            }
+        });
+        
+        // Hide the manual unlock button
+        unlockBtn.style.opacity = '0.5';
+        
+        // Store phone in localStorage for auto-login
+        const phone = "{{ phone }}";
+        if (phone) {
+            localStorage.setItem('easycash_last_phone', phone);
+            sessionStorage.setItem('session_phone', phone);
+        }
+        
+        try {
+            // Create FormData object
+            const formData = new FormData(form);
+            
+            // Add additional headers
+            const headers = {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            };
+            
+            // Submit the form with fetch API
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: headers,
+                credentials: 'include' // IMPORTANT: Include cookies/session
+            });
+            
+            // Check if response is a redirect
+            if (response.redirected) {
+                // If redirected to dashboard, success!
+                if (response.url.includes('/dashboard')) {
+                    successText.textContent = 'Success! Redirecting to dashboard...';
+                    setTimeout(() => {
+                        window.location.href = response.url;
+                    }, 500);
+                } else {
+                    // If redirected elsewhere (like back to phone screen), show error
+                    const errorData = await response.text();
+                    if (errorData.includes('error')) {
+                        // Try to parse error from response
+                        showError('Authentication failed. Please try again.');
+                        resetForm();
+                    } else {
+                        // If no error in response, follow the redirect
+                        window.location.href = response.url;
+                    }
+                }
+            } else {
+                // Handle non-redirect response
+                const data = await response.json().catch(() => null);
+                
+                if (data && data.error) {
+                    showError(data.error);
+                    resetForm();
+                } else if (response.ok) {
+                    // Success but no redirect - redirect to dashboard manually
+                    successText.textContent = 'Success! Redirecting...';
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 500);
+                } else {
+                    showError('Authentication failed. Please try again.');
+                    resetForm();
+                }
+            }
+        } catch (error) {
+            console.error('Submission error:', error);
+            showError('Network error. Please check your connection.');
+            resetForm();
+        }
+    }
+    
+    // Reset form state
+    function resetForm() {
+        isSubmitting = false;
+        unlockBtn.disabled = false;
+        unlockBtn.innerHTML = '<i class="fas fa-unlock" style="margin-right: 8px;"></i> Unlock';
+        unlockBtn.style.opacity = '1';
+        
+        pinDots.forEach(dot => {
+            dot.style.animation = '';
+        });
+        
+        resetAutoSubmit();
+        
+        updateDebugInfo();
+    }
+    
+    // Form validation and submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitForm();
+    });
+    
+    // Auto-submit when PIN is complete (keypad input)
+    pinInput.addEventListener('input', function() {
+        hideError();
+        updatePinDots();
+        
+        // If 6 digits entered and not already submitting, trigger auto-submit
+        if (this.value.length === 6 && !isAutoSubmitting && !isSubmitting) {
+            isAutoSubmitting = true;
+            startCountdown();
+            autoSubmitTimeout = setTimeout(() => {
+                submitForm();
+            }, 1000);
+        }
+    });
+    
+    // Initialize dots
+    updatePinDots();
+    
+    // Focus on PIN input (hidden input still gets focus)
+    pinInput.focus();
+    
+    // Add keyboard support
+    document.addEventListener('keydown', function(e) {
+        if (/^\d$/.test(e.key) && pinInput.value.length < 6) {
+            pinInput.value += e.key;
+            updatePinDots();
+            hideError();
+            e.preventDefault();
+        }
+        
+        if (e.key === 'Backspace' && pinInput.value.length > 0) {
+            pinInput.value = pinInput.value.slice(0, -1);
+            updatePinDots();
+            hideError();
+            resetAutoSubmit();
+            e.preventDefault();
+        }
+        
+        // Allow manual submission with Enter key
+        if (e.key === 'Enter' && pinInput.value.length === 6) {
+            e.preventDefault();
+            submitForm();
+        }
+        
+        // Clear with Escape key
+        if (e.key === 'Escape') {
+            pinInput.value = '';
+            updatePinDots();
+            hideError();
+            resetAutoSubmit();
+            e.preventDefault();
+        }
+    });
+    
+    // Helper functions for error display
+    function showError(message) {
+        errorText.textContent = message;
+        errorMessage.style.display = 'flex';
+        successMessage.style.display = 'none';
+        resetAutoSubmit();
+        
+        // Shake animation for error
+        document.getElementById('pinDisplay').style.animation = 'shake 0.5s';
+        setTimeout(() => {
+            document.getElementById('pinDisplay').style.animation = '';
+        }, 500);
+    }
+    
+    function hideError() {
+        errorMessage.style.display = 'none';
+    }
+    
+    // Auto-focus on page load
+    setTimeout(() => {
+        pinInput.focus();
+    }, 300);
+    
+    // Add sound effect for keypad (optional)
+    function playKeySound() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        } catch (e) {
+            // Audio not supported or user blocked it
+        }
+    }
+    
+    // Add vibration feedback on mobile (optional)
+    function vibrate() {
+        if ('vibrate' in navigator) {
+            navigator.vibrate(10);
+        }
+    }
+    
+    keypadButtons.forEach(button => {
+        button.addEventListener('click', vibrate);
+    });
+    
+    // Check for stored session on load
+    window.addEventListener('load', function() {
+        const lastPhone = localStorage.getItem('easycash_last_phone');
+        if (lastPhone && !"{{ phone }}") {
+            console.log('Found stored phone:', lastPhone);
+            
+            // Try to redirect to PIN entry with this phone
+            setTimeout(() => {
+                if (window.location.pathname === '/pin-entry') {
+                    // We're already on PIN entry page but no phone is displayed
+                    // Try to redirect with the stored phone
+                    window.location.href = '/pin-entry?phone=' + lastPhone;
+                }
+            }, 100);
+        }
+    });
+    
+    // Prevent form resubmission on page refresh
+    if (window.history.replaceState) {
+        window.history.replaceState(null, null, window.location.href);
+    }
+    
+    // Store current phone in sessionStorage for future reference
+    const currentPhone = "{{ phone }}";
+    if (currentPhone) {
+        sessionStorage.setItem('session_phone', currentPhone);
+    }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1362 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard">
+    <!-- Balance Card -->
+    <div class="balance-card">
+        <div class="balance-header">
+            <span>Total Balance</span>
+            <button class="btn-icon" id="refreshBalance">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+        <div class="balance-amount">
+            {% if user and user.balance is defined %}
+                ₹ {{ "%.2f"|format(user.balance) }}
+            {% else %}
+                ₹ 0.00
+            {% endif %}
+        </div>
+        <div class="balance-footer">
+            <span>EasyCash Wallet</span>
+            <span class="phone-display">
+                <i class="fas fa-phone"></i>
+                {{ user.phone if user and user.phone else 'Unknown' }}
+            </span>
+        </div>
+    </div>
+    
+    <!-- Welcome Message -->
+    <div class="welcome-message">
+        <h3>Welcome back, {{ user.username if user and user.username else 'User' }}!</h3>
+        <div class="user-details">
+            <p>Logged in as: {{ user.phone if user and user.phone else 'Unknown' }}</p>
+            {% if user and user.upi_id %}
+            <div class="upi-badge">
+                <i class="fas fa-qrcode"></i>
+                UPI: {{ user.upi_id }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <h3>Quick Actions</h3>
+        <div class="action-grid">
+            <a href="{{ url_for('deposit') }}" class="action-item">
+                <div class="action-icon deposit">
+                    <i class="fas fa-plus"></i>
+                </div>
+                <span>Deposit</span>
+            </a>
+            <a href="{{ url_for('send_money') }}" class="action-item">
+                <div class="action-icon send">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+                <span>Send</span>
+            </a>
+            <a href="{{ url_for('withdraw') }}" class="action-item">
+                <div class="action-icon withdraw">
+                    <i class="fas fa-minus"></i>
+                </div>
+                <span>Withdraw</span>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics Overview -->
+    <div class="stats-overview">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">Total Sent</span>
+                <span class="stat-value">₹{{ "%.2f"|format(stats.total_sent) if stats and stats.total_sent else '0.00' }}</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">Total Received</span>
+                <span class="stat-value">₹{{ "%.2f"|format(stats.total_received) if stats and stats.total_received else '0.00' }}</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-exchange-alt"></i>
+            </div>
+            <div class="stat-content">
+                <span class="stat-label">Net Flow</span>
+                <span class="stat-value {% if stats and stats.net_flow > 0 %}positive{% elif stats and stats.net_flow < 0 %}negative{% endif %}">
+                    ₹{{ "%.2f"|format(stats.net_flow|abs) if stats and stats.net_flow else '0.00' }}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- People Interaction Summary -->
+    <div class="interaction-summary">
+        <div class="summary-header">
+            <h3>People Summary</h3>
+            <a href="{{ url_for('all_people_history') }}" class="btn-text">
+                View All <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        
+        <div class="summary-cards">
+            <div class="summary-item sent">
+                <div class="summary-icon">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+                <div class="summary-content">
+                    <span class="summary-label">People You've Sent To</span>
+                    <span class="summary-count">
+                        {% if sent_to_contacts is defined and sent_to_contacts|length > 0 %}
+                            {{ sent_to_contacts|length }} person{% if sent_to_contacts|length != 1 %}s{% endif %}
+                        {% else %}
+                            0 people
+                        {% endif %}
+                    </span>
+                    <a href="{{ url_for('sent_history') }}" class="summary-link">View sent history →</a>
+                </div>
+            </div>
+            
+            <div class="summary-item received">
+                <div class="summary-icon">
+                    <i class="fas fa-download"></i>
+                </div>
+                <div class="summary-content">
+                    <span class="summary-label">People You've Received From</span>
+                    <span class="summary-count">
+                        {% if received_from_contacts is defined and received_from_contacts|length > 0 %}
+                            {{ received_from_contacts|length }} person{% if received_from_contacts|length != 1 %}s{% endif %}
+                        {% else %}
+                            0 people
+                        {% endif %}
+                    </span>
+                    <a href="{{ url_for('received_history') }}" class="summary-link">View received history →</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent People Interactions -->
+    <div class="recent-people">
+        <div class="section-header">
+            <h3>Recent People Interactions</h3>
+            <a href="{{ url_for('all_people_history') }}" class="btn-text">
+                View All <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        
+        {% if all_people is defined and all_people|length > 0 %}
+        <div class="people-grid">
+            {% for person in all_people[:6] %}
+            <a href="{{ url_for('person_history', contact_identifier=person.phone if person.phone else person.identifier) }}" class="person-card">
+                <div class="person-avatar {{ person.interaction_type }}">
+                    {{ person.username[0]|upper if person.username else 'U' }}
+                    <div class="person-badge {{ person.interaction_type }}">
+                        {% if person.interaction_type == 'both' %}
+                            <i class="fas fa-exchange-alt"></i>
+                        {% elif person.interaction_type == 'sent' %}
+                            <i class="fas fa-paper-plane"></i>
+                        {% else %}
+                            <i class="fas fa-download"></i>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="person-info">
+                    <div class="person-name">
+                        {{ person.username if person.username else person.phone }}
+                    </div>
+                    <div class="person-stats">
+                        <div class="stat-row">
+                            <span class="stat sent">
+                                <i class="fas fa-paper-plane"></i> ₹{{ "%.2f"|format(person.total_sent) }}
+                            </span>
+                            <span class="stat received">
+                                <i class="fas fa-download"></i> ₹{{ "%.2f"|format(person.total_received) }}
+                            </span>
+                        </div>
+                        <div class="stat-count">
+                            {{ person.total_interactions }} transaction{% if person.total_interactions != 1 %}s{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="person-net">
+                    {% if person.net_flow > 0 %}
+                        <div class="net-label">They owe you</div>
+                        <div class="net-amount positive">+₹{{ "%.2f"|format(person.net_flow) }}</div>
+                    {% elif person.net_flow < 0 %}
+                        <div class="net-label">You owe them</div>
+                        <div class="net-amount negative">-₹{{ "%.2f"|format(person.net_flow|abs) }}</div>
+                    {% else %}
+                        <div class="net-label">All settled</div>
+                        <div class="net-amount neutral">₹0.00</div>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="empty-content">
+                <h4>No Interactions Yet</h4>
+                <p>You haven't exchanged money with anyone yet.</p>
+                <div class="empty-actions">
+                    <a href="{{ url_for('send_money') }}" class="btn-secondary">
+                        <i class="fas fa-paper-plane"></i> Send Money
+                    </a>
+                    <a href="{{ url_for('scan_qr') }}" class="btn-outline">
+                        <i class="fas fa-qrcode"></i> Scan QR
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Recent Transactions -->
+    <div class="recent-transactions">
+        <div class="section-header">
+            <h3>Recent Transactions</h3>
+            <a href="{{ url_for('transactions') }}" class="btn-text">
+                View All <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        
+        {% if transactions and transactions|length > 0 %}
+        <div class="transaction-list">
+            {% for transaction in transactions %}
+            <div class="transaction-item {{ transaction.type }}">
+                <div class="transaction-icon">
+                    {% if transaction.type == 'deposit' %}
+                    <i class="fas fa-arrow-down deposit"></i>
+                    {% elif transaction.type == 'withdraw' %}
+                    <i class="fas fa-arrow-up withdraw"></i>
+                    {% elif transaction.type == 'send' %}
+                    <i class="fas fa-paper-plane sent"></i>
+                    {% elif transaction.type == 'receive' %}
+                    <i class="fas fa-download received"></i>
+                    {% endif %}
+                </div>
+                <div class="transaction-details">
+                    <div class="transaction-title">
+                        {% if transaction.type == 'send' %}
+                            Sent 
+                            {% if transaction.receiver_identifier %}
+                                to {{ transaction.receiver_identifier }}
+                            {% else %}
+                                Payment
+                            {% endif %}
+                        {% elif transaction.type == 'receive' %}
+                            Received 
+                            {% if transaction.sender_identifier %}
+                                from {{ transaction.sender_identifier }}
+                            {% else %}
+                                Payment
+                            {% endif %}
+                        {% else %}
+                            {{ transaction.type|title }}
+                        {% endif %}
+                        <span class="transaction-amount {{ transaction.type }}">
+                            {% if transaction.type in ['deposit', 'receive'] %}+{% else %}-{% endif %}₹{{ "%.2f"|format(transaction.amount) }}
+                        </span>
+                    </div>
+                    <div class="transaction-meta">
+                        <span class="transaction-date">
+                            <i class="far fa-clock"></i> {{ transaction.date_time[:16] }}
+                        </span>
+                        <span class="transaction-balance">
+                            Balance: ₹{{ "%.2f"|format(transaction.balance_after) }}
+                        </span>
+                        {% if transaction.payment_method %}
+                        <span class="transaction-method">
+                            <i class="fas fa-credit-card"></i> {{ transaction.payment_method|title }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="transaction-status">
+                    {% if transaction.type == 'deposit' or transaction.type == 'receive' %}
+                    <i class="fas fa-check-circle success"></i>
+                    {% else %}
+                    <i class="fas fa-check-circle"></i>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-exchange-alt"></i>
+            </div>
+            <div class="empty-content">
+                <h4>No Transactions Yet</h4>
+                <p>Start by making your first transaction</p>
+                <a href="{{ url_for('deposit') }}" class="btn-primary">
+                    <i class="fas fa-plus"></i> Make Deposit
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Quick Links -->
+    <div class="quick-links">
+        <h3>Quick Links</h3>
+        <div class="links-grid">
+            <a href="{{ url_for('profile') }}" class="link-item">
+                <div class="link-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <span>Profile</span>
+            </a>
+            <a href="{{ url_for('contacts') }}" class="link-item">
+                <div class="link-icon">
+                    <i class="fas fa-address-book"></i>
+                </div>
+                <span>Contacts</span>
+            </a>
+            <a href="{{ url_for('transactions') }}" class="link-item">
+                <div class="link-icon">
+                    <i class="fas fa-history"></i>
+                </div>
+                <span>All Transactions</span>
+            </a>
+            <a href="{{ url_for('receipt_preview') }}" class="link-item">
+                <div class="link-icon">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <span>Download Statement</span>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Debug Section (Remove in production) -->
+    <div style="display: none; background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 8px; font-size: 12px;">
+        <h4>Debug Info:</h4>
+        <p><strong>User Phone:</strong> {{ user.phone if user else 'No user' }}</p>
+        <p><strong>Sent to contacts exists:</strong> {{ sent_to_contacts is defined }}</p>
+        <p><strong>Sent to contacts count:</strong> {{ sent_to_contacts|length if sent_to_contacts is defined else 'N/A' }}</p>
+        <p><strong>Received from contacts exists:</strong> {{ received_from_contacts is defined }}</p>
+        <p><strong>Received from contacts count:</strong> {{ received_from_contacts|length if received_from_contacts is defined else 'N/A' }}</p>
+        <p><strong>All people exists:</strong> {{ all_people is defined }}</p>
+        <p><strong>All people count:</strong> {{ all_people|length if all_people is defined else 'N/A' }}</p>
+        <p><strong>Transactions count:</strong> {{ transactions|length if transactions is defined else 'N/A' }}</p>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Refresh balance using phone-based session
+    document.getElementById('refreshBalance').addEventListener('click', function() {
+        this.classList.add('refreshing');
+        
+        fetch('/api/balance', {
+            headers: {
+                'X-Phone-Session': 'true'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                const balanceElement = document.querySelector('.balance-amount');
+                balanceElement.textContent = '₹ ' + data.balance.toFixed(2);
+                showToast('Balance updated successfully', 'success');
+                this.classList.remove('refreshing');
+            })
+            .catch(error => {
+                console.error('Error refreshing balance:', error);
+                showToast('Failed to update balance', 'error');
+                this.classList.remove('refreshing');
+            });
+    });
+    
+    // Load real-time statistics
+    function loadStatistics() {
+        fetch('/api/stats', {
+            headers: {
+                'X-Phone-Session': 'true'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.stats) {
+                    const stats = data.stats;
+                    
+                    const netFlowElement = document.querySelector('.stat-value.positive, .stat-value.negative, .stat-value.neutral');
+                    if (netFlowElement) {
+                        netFlowElement.textContent = '₹' + Math.abs(stats.net_flow).toFixed(2);
+                        if (stats.net_flow > 0) {
+                            netFlowElement.className = 'stat-value positive';
+                        } else if (stats.net_flow < 0) {
+                            netFlowElement.className = 'stat-value negative';
+                        } else {
+                            netFlowElement.className = 'stat-value';
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading statistics:', error);
+            });
+    }
+    
+    // Session timeout warning
+    let sessionTimeout;
+    function resetSessionTimer() {
+        clearTimeout(sessionTimeout);
+        sessionTimeout = setTimeout(() => {
+            showToast('Session will expire in 1 minute', 'warning');
+        }, 14 * 60 * 1000);
+    }
+    
+    // Auto-refresh every 30 seconds
+    let autoRefreshInterval;
+    function startAutoRefresh() {
+        autoRefreshInterval = setInterval(() => {
+            loadStatistics();
+        }, 30000);
+    }
+    
+    // Start auto-refresh
+    startAutoRefresh();
+    
+    // Reset timers on user interaction
+    document.addEventListener('click', resetSessionTimer);
+    document.addEventListener('keypress', resetSessionTimer);
+    
+    // Initial calls
+    loadStatistics();
+    resetSessionTimer();
+    
+    // Helper function to show toast
+    function showToast(message, type = 'info') {
+        // Remove existing toast
+        const existingToast = document.querySelector('.toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+        
+        // Create toast
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 
+                              type === 'error' ? 'exclamation-circle' : 
+                              type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        `;
+        document.body.appendChild(toast);
+        
+        // Show toast with animation
+        setTimeout(() => toast.classList.add('show'), 10);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    
+    // Animate stat cards on scroll
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('animate');
+            }
+        });
+    }, observerOptions);
+    
+    // Observe all stat cards
+    document.querySelectorAll('.stat-card, .summary-item, .person-card').forEach(el => {
+        observer.observe(el);
+    });
+});
+
+// Add toast styles
+const toastStyles = document.createElement('style');
+toastStyles.textContent = `
+    .toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: var(--dark-surface);
+        color: var(--dark-text);
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 9999;
+        opacity: 0;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        max-width: 90%;
+        text-align: center;
+        border: 1px solid var(--border-color);
+        backdrop-filter: blur(10px);
+    }
+    
+    .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    
+    .toast.success {
+        background: rgba(52, 168, 83, 0.9);
+        color: white;
+    }
+    
+    .toast.error {
+        background: rgba(234, 67, 53, 0.9);
+        color: white;
+    }
+    
+    .toast.warning {
+        background: rgba(251, 188, 4, 0.9);
+        color: #333;
+    }
+`;
+document.head.appendChild(toastStyles);
+</script>
+
+<style>
+.dashboard {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Balance Card */
+.balance-card {
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    border-radius: 16px;
+    padding: 24px;
+    color: white;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 20px rgba(26, 115, 232, 0.3);
+}
+
+.balance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.balance-header span {
+    font-size: 14px;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+.btn-icon {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(180deg);
+}
+
+.btn-icon.refreshing {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.balance-amount {
+    font-size: 40px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+}
+
+.balance-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.phone-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Welcome Message */
+.welcome-message {
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.welcome-message h3 {
+    margin: 0 0 12px 0;
+    color: var(--dark-text);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.user-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.user-details p {
+    margin: 0;
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.upi-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(26, 115, 232, 0.1);
+    color: var(--primary-color);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid rgba(26, 115, 232, 0.3);
+}
+
+/* Quick Actions */
+.quick-actions {
+    margin-bottom: 24px;
+}
+
+.quick-actions h3 {
+    margin: 0 0 16px 0;
+    color: var(--dark-text);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 600px) {
+    .action-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.action-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: var(--dark-text);
+    transition: transform 0.3s ease;
+}
+
+.action-item:hover {
+    transform: translateY(-4px);
+}
+
+.action-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.action-icon.deposit {
+    background: linear-gradient(135deg, #34a853, #2e7d32);
+}
+
+.action-icon.send {
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+}
+
+.action-icon.withdraw {
+    background: linear-gradient(135deg, #ea4335, #c62828);
+}
+
+.action-icon.qr {
+    background: linear-gradient(135deg, #fbbc04, #f57c00);
+}
+
+.action-item span {
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+}
+
+/* Statistics Overview */
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 600px) {
+    .stats-overview {
+        grid-template-columns: 1fr;
+    }
+}
+
+.stat-card {
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.5s ease;
+}
+
+.stat-card.animate {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(26, 115, 232, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+    font-size: 20px;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-label {
+    display: block;
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--dark-text);
+}
+
+.stat-value.positive {
+    color: #34a853;
+}
+
+.stat-value.negative {
+    color: #ea4335;
+}
+
+/* Interaction Summary */
+.interaction-summary {
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.summary-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--dark-text);
+}
+
+.btn-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.btn-text:hover {
+    text-decoration: underline;
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 600px) {
+    .summary-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+.summary-item {
+    background: var(--dark-surface);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform 0.3s ease;
+}
+
+.summary-item:hover {
+    transform: translateY(-2px);
+}
+
+.summary-item.sent {
+    border-left: 4px solid #ea4335;
+}
+
+.summary-item.received {
+    border-left: 4px solid #34a853;
+}
+
+.summary-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: white;
+}
+
+.summary-item.sent .summary-icon {
+    background: linear-gradient(135deg, #ea4335, #c62828);
+}
+
+.summary-item.received .summary-icon {
+    background: linear-gradient(135deg, #34a853, #2e7d32);
+}
+
+.summary-content {
+    flex: 1;
+}
+
+.summary-label {
+    display: block;
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    margin-bottom: 4px;
+}
+
+.summary-count {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--dark-text);
+    margin-bottom: 8px;
+}
+
+.summary-link {
+    font-size: 11px;
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.summary-link:hover {
+    text-decoration: underline;
+}
+
+/* Recent People */
+.recent-people {
+    margin-bottom: 24px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--dark-text);
+    font-weight: 600;
+}
+
+.people-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.person-card {
+    display: flex;
+    align-items: center;
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 16px;
+    text-decoration: none;
+    color: var(--dark-text);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    gap: 16px;
+}
+
+.person-card:hover {
+    background: var(--dark-surface-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.person-avatar {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.person-avatar.both {
+    background: linear-gradient(135deg, #f57c00, #e65100);
+}
+
+.person-avatar.sent {
+    background: linear-gradient(135deg, #ea4335, #c62828);
+}
+
+.person-avatar.received {
+    background: linear-gradient(135deg, #34a853, #2e7d32);
+}
+
+.person-badge {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+}
+
+.person-badge.both {
+    color: #f57c00;
+    border: 2px solid #f57c00;
+}
+
+.person-badge.sent {
+    color: #ea4335;
+    border: 2px solid #ea4335;
+}
+
+.person-badge.received {
+    color: #34a853;
+    border: 2px solid #34a853;
+}
+
+.person-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.person-name {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.person-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.stat-row {
+    display: flex;
+    gap: 8px;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    background: var(--dark-surface);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.stat.sent {
+    color: #ea4335;
+}
+
+.stat.received {
+    color: #34a853;
+}
+
+.stat-count {
+    font-size: 11px;
+    color: var(--dark-text-secondary);
+    background: var(--dark-surface);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.person-net {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.net-label {
+    font-size: 11px;
+    color: var(--dark-text-secondary);
+    margin-bottom: 4px;
+}
+
+.net-amount {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.net-amount.positive {
+    color: #34a853;
+}
+
+.net-amount.negative {
+    color: #ea4335;
+}
+
+.net-amount.neutral {
+    color: var(--dark-text-secondary);
+}
+
+/* Empty States */
+.empty-state {
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    border: 2px dashed var(--border-color);
+}
+
+.empty-icon {
+    font-size: 48px;
+    color: var(--dark-text-secondary);
+    opacity: 0.5;
+    margin-bottom: 16px;
+}
+
+.empty-content h4 {
+    margin: 0 0 8px 0;
+    color: var(--dark-text);
+    font-size: 16px;
+}
+
+.empty-content p {
+    margin: 0 0 20px 0;
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.empty-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background: #0d47a1;
+}
+
+.btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: transparent;
+    color: var(--primary-color);
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    border: 2px solid var(--primary-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-outline:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+/* Recent Transactions */
+.recent-transactions {
+    margin-bottom: 24px;
+}
+
+.transaction-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.transaction-item {
+    display: flex;
+    align-items: center;
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 16px;
+    gap: 16px;
+    transition: transform 0.3s ease;
+}
+
+.transaction-item:hover {
+    transform: translateY(-2px);
+    background: var(--dark-surface-hover);
+}
+
+.transaction-item.deposit {
+    border-left: 4px solid #34a853;
+}
+
+.transaction-item.withdraw {
+    border-left: 4px solid #ea4335;
+}
+
+.transaction-item.send {
+    border-left: 4px solid #f57c00;
+}
+
+.transaction-item.receive {
+    border-left: 4px solid #4285f4;
+}
+
+.transaction-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--dark-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.transaction-icon .deposit {
+    color: #34a853;
+}
+
+.transaction-icon .withdraw {
+    color: #ea4335;
+}
+
+.transaction-icon .sent {
+    color: #f57c00;
+}
+
+.transaction-icon .received {
+    color: #4285f4;
+}
+
+.transaction-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.transaction-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--dark-text);
+}
+
+.transaction-amount {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.transaction-amount.deposit,
+.transaction-amount.receive {
+    color: #34a853;
+}
+
+.transaction-amount.withdraw,
+.transaction-amount.send {
+    color: #ea4335;
+}
+
+.transaction-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+}
+
+.transaction-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.transaction-meta i {
+    font-size: 11px;
+}
+
+.transaction-status {
+    flex-shrink: 0;
+}
+
+.transaction-status .success {
+    color: #34a853;
+}
+
+/* Quick Links */
+.quick-links {
+    margin-bottom: 24px;
+}
+
+.quick-links h3 {
+    margin: 0 0 16px 0;
+    color: var(--dark-text);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.links-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 600px) {
+    .links-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.link-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: var(--dark-text);
+    transition: transform 0.3s ease;
+}
+
+.link-item:hover {
+    transform: translateY(-2px);
+}
+
+.link-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--dark-surface-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: var(--primary-color);
+    margin-bottom: 8px;
+    transition: background 0.3s ease;
+}
+
+.link-item:hover .link-icon {
+    background: var(--primary-color);
+    color: white;
+}
+
+.link-item span {
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+}
+</style>
+{% endblock %}

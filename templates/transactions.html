@@ -1,0 +1,1464 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="transactions-container">
+    <!-- Header with back button and actions -->
+    <div class="transactions-header">
+        <a href="{{ url_for('dashboard') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2>Transaction History</h2>
+        <div class="header-actions">
+            <button class="btn-icon" id="previewBtn" title="Preview Receipt">
+                <i class="fas fa-eye"></i>
+            </button>
+            <button class="btn-icon" id="downloadBtn" title="Download PDF">
+                <i class="fas fa-file-pdf"></i>
+            </button>
+            <button class="btn-icon" id="filterBtn" title="Filter">
+                <i class="fas fa-filter"></i>
+            </button>
+            <a href="{{ url_for('send_money') }}" class="btn-icon" title="Send Money">
+                <i class="fas fa-paper-plane"></i>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics Summary -->
+    <div class="stats-card">
+        <div class="stat-item">
+            <span class="stat-label">Total Deposits</span>
+            <span class="stat-value deposit">
+                ₹{{ "%.2f"|format(transactions|selectattr('type', 'equalto', 'deposit')|map(attribute='amount')|sum) }}
+            </span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Total Withdrawals</span>
+            <span class="stat-value withdraw">
+                ₹{{ "%.2f"|format(transactions|selectattr('type', 'equalto', 'withdraw')|map(attribute='amount')|sum) }}
+            </span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Sent</span>
+            <span class="stat-value send">
+                ₹{{ "%.2f"|format(transactions|selectattr('type', 'equalto', 'send')|map(attribute='amount')|sum) }}
+            </span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Received</span>
+            <span class="stat-value receive">
+                ₹{{ "%.2f"|format(transactions|selectattr('type', 'equalto', 'receive')|map(attribute='amount')|sum) }}
+            </span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Current Balance</span>
+            <span class="stat-value">
+                {% if current_balance is defined %}
+                    ₹{{ "%.2f"|format(current_balance) }}
+                {% else %}
+                    ₹0.00
+                {% endif %}
+            </span>
+        </div>
+    </div>
+    
+    <!-- Filter Options (Hidden by default) -->
+    <div class="filter-options" id="filterOptions" style="display: none;">
+        <div class="filter-header">
+            <h4>Filter by</h4>
+            <button class="btn-text" id="clearFilters">
+                Clear
+            </button>
+        </div>
+        <div class="filter-buttons">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="deposit">Deposits</button>
+            <button class="filter-btn" data-filter="withdraw">Withdrawals</button>
+            <button class="filter-btn" data-filter="send">Sent</button>
+            <button class="filter-btn" data-filter="receive">Received</button>
+        </div>
+        <div class="date-filters">
+            <select id="dateRange">
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+            </select>
+        </div>
+        <div class="method-filters" style="margin-top: 15px;">
+            <label style="display: block; margin-bottom: 8px; font-size: 14px;">Payment Method:</label>
+            <div class="method-filter-buttons">
+                <button class="method-filter-btn active" data-method="all">All</button>
+                <button class="method-filter-btn" data-method="mobile">Mobile</button>
+                <button class="method-filter-btn" data-method="upi">UPI</button>
+                <button class="method-filter-btn" data-method="contact">Contact</button>
+                <button class="method-filter-btn" data-method="bank">Bank</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions Bar -->
+    <div class="quick-actions-bar">
+        <button class="quick-action-btn" id="exportAllBtn">
+            <i class="fas fa-file-export"></i>
+            Export All
+        </button>
+        <button class="quick-action-btn" id="printBtn">
+            <i class="fas fa-print"></i>
+            Print
+        </button>
+        <button class="quick-action-btn" id="refreshBtn">
+            <i class="fas fa-sync-alt"></i>
+            Refresh
+        </button>
+        <a href="{{ url_for('send_money') }}" class="quick-action-btn" style="text-decoration: none;">
+            <i class="fas fa-paper-plane"></i>
+            Send Money
+        </a>
+    </div>
+    
+    <!-- Transaction List -->
+    {% if transactions %}
+    <div class="transaction-list" id="transactionList">
+        {% for transaction in transactions %}
+        <div class="transaction-card-item {{ transaction.type }}" 
+             data-type="{{ transaction.type }}" 
+             data-date="{{ transaction.date_time }}" 
+             data-amount="{{ transaction.amount }}" 
+             data-balance="{{ transaction.balance_after }}"
+             data-method="{{ transaction.payment_method or '' }}"
+             data-id="{{ transaction.transaction_id }}">
+            <div class="transaction-icon">
+                {% if transaction.type == 'deposit' %}
+                <i class="fas fa-arrow-down deposit"></i>
+                {% elif transaction.type == 'withdraw' %}
+                <i class="fas fa-arrow-up withdraw"></i>
+                {% elif transaction.type == 'send' %}
+                <i class="fas fa-paper-plane send"></i>
+                {% elif transaction.type == 'receive' %}
+                <i class="fas fa-download receive"></i>
+                {% else %}
+                <i class="fas fa-exchange-alt"></i>
+                {% endif %}
+            </div>
+            <div class="transaction-info">
+                <div class="transaction-main">
+                    <div class="transaction-title">
+                        <span class="transaction-type">
+                            {{ transaction.type|title }}
+                        </span>
+                        {% if transaction.payment_method %}
+                        <span class="payment-method-badge">
+                            {{ transaction.payment_method|title }}
+                        </span>
+                        {% endif %}
+                        <span class="transaction-amount {{ transaction.type }}">
+                            {% if transaction.type == 'deposit' or transaction.type == 'receive' %}
+                                +₹{{ "%.2f"|format(transaction.amount) }}
+                            {% else %}
+                                -₹{{ "%.2f"|format(transaction.amount) }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="transaction-date">
+                        {{ transaction.date_time[:10] }} • {{ transaction.date_time[11:16] }}
+                        {% if transaction.type == 'send' and transaction.receiver_identifier %}
+                            <span class="transaction-party">
+                                • To: {{ transaction.receiver_identifier }}
+                            </span>
+                        {% elif transaction.type == 'receive' and transaction.sender_identifier %}
+                            <span class="transaction-party">
+                                • From: {{ transaction.sender_identifier }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="transaction-meta">
+                    <div class="transaction-id">
+                        ID: {{ transaction.transaction_id|truncate(12, True, '') }}
+                    </div>
+                    <div class="transaction-balance">
+                        Balance: ₹{{ "%.2f"|format(transaction.balance_after) }}
+                    </div>
+                </div>
+            </div>
+            <div class="transaction-actions">
+                <button class="action-btn" onclick="downloadReceipt('{{ transaction.transaction_id }}')" title="Download Receipt">
+                    <i class="fas fa-receipt"></i>
+                </button>
+                {% if transaction.type == 'send' and transaction.receiver_identifier %}
+                <button class="action-btn" onclick="resendTo('{{ transaction.receiver_identifier }}', '{{ transaction.payment_method or 'contact' }}')" title="Resend">
+                    <i class="fas fa-redo"></i>
+                </button>
+                {% endif %}
+                {% if transaction.type == 'receive' and transaction.sender_identifier %}
+                <button class="action-btn" onclick="sendBack('{{ transaction.sender_identifier }}')" title="Send Back">
+                    <i class="fas fa-reply"></i>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Load More Button -->
+    <div class="load-more" id="loadMore" style="display: none;">
+        <button class="btn-text" id="loadMoreBtn">
+            <i class="fas fa-chevron-down"></i>
+            Load More
+        </button>
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <i class="fas fa-exchange-alt"></i>
+        <h3>No Transactions Yet</h3>
+        <p>Your transaction history will appear here</p>
+        <div class="empty-state-actions">
+            <a href="{{ url_for('deposit') }}" class="btn-primary">
+                Make First Deposit
+            </a>
+            <a href="{{ url_for('send_money') }}" class="btn-secondary">
+                Send Money
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.transactions-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.transactions-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.btn-back {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--dark-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dark-text);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.btn-back:hover {
+    background: var(--dark-surface-light);
+    transform: translateX(-2px);
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--dark-surface);
+    border: none;
+    color: var(--dark-text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    text-decoration: none;
+}
+
+.btn-icon:hover {
+    background: var(--dark-surface-light);
+    transform: translateY(-2px);
+}
+
+.btn-icon.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.stats-card {
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    box-shadow: var(--shadow);
+}
+
+.stat-item {
+    text-align: center;
+    padding: 15px;
+    background: var(--dark-surface-light);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.stat-label {
+    display: block;
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.stat-value.deposit {
+    color: var(--success-color);
+}
+
+.stat-value.withdraw {
+    color: var(--danger-color);
+}
+
+.stat-value.send {
+    color: var(--primary-color);
+}
+
+.stat-value.receive {
+    color: var(--receive-color, #2ecc71);
+}
+
+.quick-actions-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.quick-action-btn {
+    padding: 12px 20px;
+    background: var(--dark-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--dark-text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+    font-weight: 500;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.quick-action-btn:hover {
+    background: var(--dark-surface-light);
+    transform: translateY(-2px);
+}
+
+.quick-action-btn i {
+    font-size: 16px;
+}
+
+.filter-options {
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.filter-header h4 {
+    margin: 0;
+    color: var(--dark-text);
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 10px 16px;
+    background: var(--dark-surface-light);
+    border: 1px solid var(--border-color);
+    color: var(--dark-text-secondary);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.filter-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.method-filter-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.method-filter-btn {
+    padding: 8px 12px;
+    background: var(--dark-surface-light);
+    border: 1px solid var(--border-color);
+    color: var(--dark-text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.method-filter-btn.active {
+    background: var(--secondary-color);
+    color: white;
+    border-color: var(--secondary-color);
+}
+
+.date-filters select {
+    width: 100%;
+    padding: 12px;
+    background: var(--dark-surface-light);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--dark-text);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.transaction-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.transaction-card-item {
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    transition: var(--transition);
+    box-shadow: var(--shadow);
+    position: relative;
+    border-left: 4px solid transparent;
+    animation: fadeInUp 0.5s ease;
+    animation-fill-mode: both;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.transaction-card-item.deposit {
+    border-left-color: var(--success-color);
+}
+
+.transaction-card-item.withdraw {
+    border-left-color: var(--danger-color);
+}
+
+.transaction-card-item.send {
+    border-left-color: var(--primary-color);
+}
+
+.transaction-card-item.receive {
+    border-left-color: var(--receive-color, #2ecc71);
+}
+
+.transaction-card-item:hover {
+    background: var(--dark-surface-light);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.transaction-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--dark-surface-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    margin-right: 16px;
+    flex-shrink: 0;
+}
+
+.transaction-icon .deposit {
+    color: var(--success-color);
+}
+
+.transaction-icon .withdraw {
+    color: var(--danger-color);
+}
+
+.transaction-icon .send {
+    color: var(--primary-color);
+}
+
+.transaction-icon .receive {
+    color: var(--receive-color, #2ecc71);
+}
+
+.transaction-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.transaction-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.transaction-title {
+    font-weight: 600;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.transaction-type {
+    font-weight: 700;
+}
+
+.payment-method-badge {
+    font-size: 11px;
+    background: var(--dark-surface-light);
+    color: var(--dark-text-secondary);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.transaction-amount {
+    font-weight: 700;
+    font-size: 18px;
+    margin-left: auto;
+}
+
+.transaction-amount.deposit {
+    color: var(--success-color);
+}
+
+.transaction-amount.withdraw {
+    color: var(--danger-color);
+}
+
+.transaction-amount.send {
+    color: var(--primary-color);
+}
+
+.transaction-amount.receive {
+    color: var(--receive-color, #2ecc71);
+}
+
+.transaction-date {
+    font-size: 13px;
+    color: var(--dark-text-secondary);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.transaction-party {
+    font-size: 12px;
+    background: rgba(255,255,255,0.05);
+    padding: 2px 8px;
+    border-radius: 10px;
+    color: var(--dark-text-secondary);
+}
+
+.transaction-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.transaction-id {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+}
+
+.transaction-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: 16px;
+    flex-shrink: 0;
+}
+
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--dark-surface-light);
+    border: none;
+    color: var(--dark-text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.action-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.1);
+}
+
+.load-more {
+    text-align: center;
+    margin-top: 32px;
+    padding: 20px;
+}
+
+#loadMoreBtn {
+    padding: 14px 32px;
+    background: var(--dark-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--dark-text);
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#loadMoreBtn:hover {
+    background: var(--dark-surface-light);
+    transform: translateY(-2px);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-top: 40px;
+}
+
+.empty-state i {
+    font-size: 64px;
+    color: var(--dark-text-secondary);
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 24px;
+    margin-bottom: 12px;
+    color: var(--dark-text);
+}
+
+.empty-state p {
+    color: var(--dark-text-secondary);
+    margin-bottom: 30px;
+    font-size: 16px;
+}
+
+.empty-state-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-primary {
+    padding: 14px 32px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    padding: 14px 32px;
+    background: var(--dark-surface);
+    color: var(--dark-text);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background: var(--dark-surface-light);
+    transform: translateY(-2px);
+}
+
+.btn-text {
+    padding: 12px 24px;
+    background: transparent;
+    color: var(--dark-text-secondary);
+    border: none;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-text:hover {
+    color: var(--dark-text);
+    background: rgba(255,255,255,0.05);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .transactions-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .header-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .stats-card {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .transaction-card-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .transaction-icon {
+        margin-right: 0;
+    }
+    
+    .transaction-info {
+        width: 100%;
+    }
+    
+    .transaction-main {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .transaction-title {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .transaction-meta {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .transaction-actions {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        margin-left: 0;
+    }
+    
+    .quick-actions-bar {
+        justify-content: center;
+    }
+    
+    .empty-state-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-card {
+        grid-template-columns: 1fr;
+    }
+    
+    .filter-buttons {
+        flex-direction: column;
+    }
+    
+    .filter-btn {
+        width: 100%;
+    }
+    
+    .method-filter-buttons {
+        flex-direction: column;
+    }
+    
+    .method-filter-btn {
+        width: 100%;
+    }
+    
+    .transaction-amount {
+        font-size: 16px;
+    }
+    
+    .transaction-date {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+}
+
+/* Print styles */
+@media print {
+    .transactions-header,
+    .stats-card,
+    .filter-options,
+    .quick-actions-bar,
+    .transaction-actions,
+    .load-more,
+    .btn-back {
+        display: none !important;
+    }
+    
+    .transactions-container {
+        padding: 0;
+        max-width: none;
+    }
+    
+    .transaction-card-item {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        border-left: none;
+        border: 1px solid #ddd;
+        margin-bottom: 10px;
+        box-shadow: none !important;
+        transform: none !important;
+    }
+    
+    body {
+        background: white !important;
+        color: black !important;
+    }
+    
+    .transaction-amount.deposit {
+        color: darkgreen !important;
+    }
+    
+    .transaction-amount.withdraw {
+        color: darkred !important;
+    }
+    
+    .transaction-amount.send {
+        color: darkblue !important;
+    }
+    
+    .transaction-amount.receive {
+        color: darkgreen !important;
+    }
+    
+    @page {
+        margin: 20mm;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM Elements
+    const filterBtn = document.getElementById('filterBtn');
+    const previewBtn = document.getElementById('previewBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const exportAllBtn = document.getElementById('exportAllBtn');
+    const printBtn = document.getElementById('printBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const filterOptions = document.getElementById('filterOptions');
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const methodFilterButtons = document.querySelectorAll('.method-filter-btn');
+    const dateRange = document.getElementById('dateRange');
+    const clearFilters = document.getElementById('clearFilters');
+    const transactionItems = document.querySelectorAll('.transaction-card-item');
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    const loadMoreContainer = document.getElementById('loadMore');
+    
+    // State variables
+    let currentFilter = 'all';
+    let currentMethodFilter = 'all';
+    let currentDateRange = 'all';
+    let visibleItems = 10;
+    
+    // Initialize
+    initializePage();
+    
+    function initializePage() {
+        // Load saved filters from localStorage
+        const savedFilter = localStorage.getItem('easycash_transaction_filter');
+        const savedMethodFilter = localStorage.getItem('easycash_method_filter');
+        const savedDateRange = localStorage.getItem('easycash_date_range');
+        
+        if (savedFilter) {
+            currentFilter = savedFilter;
+            updateFilterButtons(savedFilter, filterButtons);
+        }
+        
+        if (savedMethodFilter) {
+            currentMethodFilter = savedMethodFilter;
+            updateFilterButtons(savedMethodFilter, methodFilterButtons);
+        }
+        
+        if (savedDateRange) {
+            currentDateRange = savedDateRange;
+            dateRange.value = savedDateRange;
+        }
+        
+        // Apply initial filters
+        applyFilters();
+        
+        // Show load more if needed
+        updateLoadMoreButton();
+        
+        // Setup event listeners
+        setupEventListeners();
+        
+        // Setup animations
+        setupAnimations();
+    }
+    
+    function setupEventListeners() {
+        // Toggle filter options - FIXED FUNCTION
+        filterBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent event bubbling
+            
+            const isVisible = filterOptions.style.display === 'block' || 
+                             filterOptions.style.display === '';
+            
+            if (isVisible) {
+                filterOptions.style.display = 'none';
+                filterBtn.classList.remove('active');
+            } else {
+                filterOptions.style.display = 'block';
+                filterBtn.classList.add('active');
+                
+                // Add animation
+                filterOptions.style.animation = 'none';
+                setTimeout(() => {
+                    filterOptions.style.animation = 'slideDown 0.3s ease';
+                }, 10);
+            }
+        });
+        
+        // Apply filter by type
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentFilter = btn.dataset.filter;
+                updateFilterButtons(currentFilter, filterButtons);
+                localStorage.setItem('easycash_transaction_filter', currentFilter);
+                applyFilters();
+                updateLoadMoreButton();
+            });
+        });
+        
+        // Apply method filter
+        methodFilterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentMethodFilter = btn.dataset.method;
+                updateFilterButtons(currentMethodFilter, methodFilterButtons);
+                localStorage.setItem('easycash_method_filter', currentMethodFilter);
+                applyFilters();
+                updateLoadMoreButton();
+            });
+        });
+        
+        // Date range filter
+        dateRange.addEventListener('change', () => {
+            currentDateRange = dateRange.value;
+            localStorage.setItem('easycash_date_range', currentDateRange);
+            applyFilters();
+            updateLoadMoreButton();
+        });
+        
+        // Clear filters
+        clearFilters.addEventListener('click', clearAllFilters);
+        
+        // Preview Receipt
+        previewBtn.addEventListener('click', previewReceipt);
+        
+        // Download PDF
+        downloadBtn.addEventListener('click', downloadPDF);
+        
+        // Export All
+        if (exportAllBtn) {
+            exportAllBtn.addEventListener('click', exportAllTransactions);
+        }
+        
+        // Print
+        if (printBtn) {
+            printBtn.addEventListener('click', printTransactions);
+        }
+        
+        // Refresh
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', refreshTransactions);
+        }
+        
+        // Load more functionality
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', loadMoreTransactions);
+        }
+        
+        // Keyboard shortcuts
+        setupKeyboardShortcuts();
+        
+        // Close filter when clicking outside
+        document.addEventListener('click', function(e) {
+            if (filterOptions.style.display === 'block' && 
+                !filterOptions.contains(e.target) && 
+                !filterBtn.contains(e.target)) {
+                filterOptions.style.display = 'none';
+                filterBtn.classList.remove('active');
+            }
+        });
+    }
+    
+    function setupAnimations() {
+        // Stagger animation for transaction items
+        transactionItems.forEach((item, index) => {
+            item.style.animationDelay = `${index * 0.05}s`;
+        });
+    }
+    
+    function updateFilterButtons(activeFilter, buttons) {
+        buttons.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.filter === activeFilter || btn.dataset.method === activeFilter) {
+                btn.classList.add('active');
+            }
+        });
+    }
+    
+    function clearAllFilters() {
+        currentFilter = 'all';
+        currentMethodFilter = 'all';
+        currentDateRange = 'all';
+        
+        updateFilterButtons('all', filterButtons);
+        updateFilterButtons('all', methodFilterButtons);
+        dateRange.value = 'all';
+        
+        localStorage.removeItem('easycash_transaction_filter');
+        localStorage.removeItem('easycash_method_filter');
+        localStorage.removeItem('easycash_date_range');
+        
+        applyFilters();
+        updateLoadMoreButton();
+        
+        showToast('Filters cleared', 'success');
+    }
+    
+    function applyFilters() {
+        const now = new Date();
+        let visibleCount = 0;
+        
+        transactionItems.forEach((item, index) => {
+            let show = true;
+            
+            // Type filter
+            if (currentFilter !== 'all' && item.dataset.type !== currentFilter) {
+                show = false;
+            }
+            
+            // Method filter
+            if (show && currentMethodFilter !== 'all') {
+                const itemMethod = item.dataset.method || '';
+                if (itemMethod.toLowerCase() !== currentMethodFilter.toLowerCase()) {
+                    show = false;
+                }
+            }
+            
+            // Date filter
+            if (show && currentDateRange !== 'all') {
+                const itemDate = new Date(item.dataset.date);
+                let shouldShow = false;
+                
+                switch (currentDateRange) {
+                    case 'today':
+                        shouldShow = itemDate.toDateString() === now.toDateString();
+                        break;
+                    case 'week':
+                        const weekAgo = new Date(now);
+                        weekAgo.setDate(now.getDate() - 7);
+                        shouldShow = itemDate >= weekAgo;
+                        break;
+                    case 'month':
+                        const monthAgo = new Date(now);
+                        monthAgo.setMonth(now.getMonth() - 1);
+                        shouldShow = itemDate >= monthAgo;
+                        break;
+                }
+                
+                if (!shouldShow) show = false;
+            }
+            
+            // Limit items for pagination
+            if (index >= visibleItems) {
+                show = false;
+            }
+            
+            item.style.display = show ? 'flex' : 'none';
+            if (show) visibleCount++;
+        });
+        
+        updateVisibleCount(visibleCount);
+    }
+    
+    function updateVisibleCount(count) {
+        const totalCount = transactionItems.length;
+        let countElement = document.getElementById('visibleCount');
+        
+        if (!countElement) {
+            const header = document.querySelector('.transactions-header h2');
+            if (header) {
+                countElement = document.createElement('span');
+                countElement.id = 'visibleCount';
+                countElement.className = 'transaction-count';
+                countElement.style.cssText = `
+                    font-size: 14px;
+                    color: var(--dark-text-secondary);
+                    margin-left: 8px;
+                    font-weight: normal;
+                `;
+                header.appendChild(countElement);
+            }
+        }
+        
+        if (countElement) {
+            countElement.textContent = ` (${count}/${totalCount})`;
+        }
+    }
+    
+    function updateLoadMoreButton() {
+        const visibleCount = document.querySelectorAll('.transaction-card-item[style="flex"]').length;
+        const totalCount = transactionItems.length;
+        
+        if (visibleCount < totalCount && totalCount > 10) {
+            loadMoreContainer.style.display = 'block';
+        } else {
+            loadMoreContainer.style.display = 'none';
+        }
+    }
+    
+    function loadMoreTransactions() {
+        visibleItems += 10;
+        applyFilters();
+        updateLoadMoreButton();
+        
+        // Animate new items
+        const newItems = document.querySelectorAll(`.transaction-card-item:nth-child(n+${visibleItems - 9})`);
+        newItems.forEach((item, index) => {
+            if (item.style.display === 'flex') {
+                item.style.animation = 'fadeInUp 0.5s ease';
+                item.style.animationDelay = `${index * 0.05}s`;
+                item.style.animationFillMode = 'both';
+            }
+        });
+        
+        showToast(`Loaded ${Math.min(visibleItems, transactionItems.length)} of ${transactionItems.length} transactions`, 'info');
+    }
+    
+    function previewReceipt() {
+        const url = `/receipt-preview?filter=${currentFilter}&date_range=${currentDateRange}&method=${currentMethodFilter}`;
+        window.open(url, '_blank');
+        showToast('Opening receipt preview...', 'info');
+    }
+    
+    function downloadPDF() {
+        const url = `/download-receipt?filter=${currentFilter}&date_range=${currentDateRange}&method=${currentMethodFilter}`;
+        triggerDownload(url);
+        showToast('Downloading PDF...', 'info');
+    }
+    
+    function exportAllTransactions() {
+        // Create CSV export
+        const visibleTransactions = Array.from(transactionItems)
+            .filter(item => item.style.display === 'flex')
+            .map(item => ({
+                type: item.dataset.type,
+                amount: item.dataset.amount,
+                date: item.dataset.date,
+                method: item.dataset.method,
+                balance: item.dataset.balance
+            }));
+        
+        if (visibleTransactions.length === 0) {
+            showToast('No transactions to export', 'warning');
+            return;
+        }
+        
+        // Create CSV content
+        let csv = 'Type,Amount,Date,Method,Balance\n';
+        visibleTransactions.forEach(t => {
+            const type = t.type.charAt(0).toUpperCase() + t.type.slice(1);
+            const amount = parseFloat(t.amount).toFixed(2);
+            const date = new Date(t.date).toLocaleDateString();
+            const method = t.method || 'N/A';
+            const balance = parseFloat(t.balance).toFixed(2);
+            
+            csv += `${type},₹${amount},${date},${method},₹${balance}\n`;
+        });
+        
+        // Trigger download
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `transactions-${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast('Exported to CSV successfully', 'success');
+    }
+    
+    function printTransactions() {
+        window.print();
+    }
+    
+    function refreshTransactions() {
+        showToast('Refreshing transactions...', 'info');
+        setTimeout(() => {
+            location.reload();
+        }, 500);
+    }
+    
+    function setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+F or Cmd+F for filter
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                filterBtn.click();
+            }
+            
+            // Ctrl+P or Cmd+P for print
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                e.preventDefault();
+                printTransactions();
+            }
+            
+            // Ctrl+D or Cmd+D for download
+            if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+                e.preventDefault();
+                downloadPDF();
+            }
+            
+            // Escape to close filters
+            if (e.key === 'Escape' && filterOptions.style.display === 'block') {
+                filterOptions.style.display = 'none';
+                filterBtn.classList.remove('active');
+            }
+        });
+    }
+    
+    function triggerDownload(url) {
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = url;
+        document.body.appendChild(iframe);
+        
+        setTimeout(() => {
+            if (iframe.parentNode) {
+                iframe.parentNode.removeChild(iframe);
+            }
+        }, 5000);
+    }
+    
+    // Global functions for action buttons
+    window.downloadReceipt = function(transactionId) {
+        const url = `/download-transaction/${transactionId}`;
+        triggerDownload(url);
+        showToast('Downloading receipt...', 'info');
+    };
+    
+    window.resendTo = function(identifier, method) {
+        const amount = prompt(`Amount to send to ${identifier}:`, '100');
+        if (amount && !isNaN(amount) && parseFloat(amount) > 0) {
+            window.location.href = `/send-money?identifier=${encodeURIComponent(identifier)}&method=${method}&amount=${amount}`;
+        }
+    };
+    
+    window.sendBack = function(username) {
+        const amount = prompt(`Amount to send back to ${username}:`, '100');
+        if (amount && !isNaN(amount) && parseFloat(amount) > 0) {
+            window.location.href = `/send-money?identifier=${encodeURIComponent(username)}&method=contact&amount=${amount}`;
+        }
+    };
+    
+    // Initialize with some visible items
+    updateLoadMoreButton();
+    applyFilters();
+});
+
+// Add CSS for custom colors
+const style = document.createElement('style');
+style.textContent = `
+    :root {
+        --receive-color: #2ecc71;
+        --secondary-color: #9b59b6;
+    }
+    
+    .transaction-count {
+        font-weight: normal;
+        opacity: 0.7;
+    }
+    
+    .toast-notification {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 15px 25px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: var(--border-radius);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s, transform 0.3s;
+        max-width: 90%;
+        text-align: center;
+        font-weight: 500;
+    }
+    
+    .toast-notification.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+`;
+document.head.appendChild(style);
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    // Remove existing toast
+    const existingToast = document.querySelector('.toast-notification');
+    if (existingToast) {
+        existingToast.remove();
+    }
+    
+    // Create new toast
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+    
+    // Style based on type
+    const colors = {
+        success: 'linear-gradient(135deg, #27ae60, #219653)',
+        error: 'linear-gradient(135deg, #e74c3c, #c0392b)',
+        warning: 'linear-gradient(135deg, #f39c12, #d35400)',
+        info: 'linear-gradient(135deg, #3498db, #2980b9)'
+    };
+    
+    toast.style.background = colors[type] || colors.info;
+    
+    document.body.appendChild(toast);
+    
+    // Show with animation
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 300);
+    }, 3000);
+}
+</script>
+{% endblock %}

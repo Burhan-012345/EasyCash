@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyCash - Offline</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Google Sans', sans-serif;
+            background: #121212;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .offline-container {
+            max-width: 400px;
+        }
+        
+        .offline-icon {
+            font-size: 80px;
+            color: #fbbc04;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 16px;
+            color: #ffffff;
+        }
+        
+        p {
+            color: #b0b0b0;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+        
+        .btn-retry {
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-retry:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(26, 115, 232, 0.3);
+        }
+        
+        .features {
+            margin-top: 40px;
+            text-align: left;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            color: #b0b0b0;
+        }
+        
+        .feature-item i {
+            color: #34a853;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">
+            <i class="fas fa-wifi-slash"></i>
+        </div>
+        
+        <h1>You're Offline</h1>
+        <p>EasyCash is currently unavailable due to no internet connection.</p>
+        <p>Some features require an active internet connection to work properly.</p>
+        
+        <button onclick="window.location.reload()" class="btn-retry">
+            <i class="fas fa-sync-alt"></i>
+            Retry Connection
+        </button>
+        
+        <div class="features">
+            <div class="feature-item">
+                <i class="fas fa-check-circle"></i>
+                <span>View recent transactions</span>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-check-circle"></i>
+                <span>Check your balance</span>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-times-circle"></i>
+                <span>New transactions (requires internet)</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Check connection status periodically
+        setInterval(() => {
+            if (navigator.onLine) {
+                window.location.href = '/';
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

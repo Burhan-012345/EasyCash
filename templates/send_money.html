@@ -1,0 +1,3111 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="send-money-container">
+    <!-- Header -->
+    <div class="send-money-header">
+        <a href="{{ url_for('dashboard') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2>Send Money</h2>
+    </div>
+    
+    <!-- Balance Card -->
+    <div class="balance-card send-money-balance">
+        <div class="balance-label">Available Balance</div>
+        <div class="balance-amount-large">
+            ₹{{ "%.2f"|format(user.balance) }}
+        </div>
+        {% if user and user.upi_id %}
+        <div class="upi-id-display">
+            <i class="fas fa-qrcode"></i>
+            <span>Your UPI ID: {{ user.upi_id }}</span>
+            <button class="btn-copy-upi" onclick="copyOwnUPI()" title="Copy your UPI ID">
+                <i class="fas fa-copy"></i>
+            </button>
+        </div>
+        {% endif %}
+        <div class="user-phone-display">
+            <i class="fas fa-phone"></i>
+            <span>Logged in as: {{ user.phone }}</span>
+        </div>
+    </div>
+    
+    <!-- Send Money Form -->
+    <div class="send-money-form">
+        {% if error %}
+        <div class="alert alert-error">
+            <i class="fas fa-exclamation-circle"></i>
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        {% if success %}
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i>
+            {{ success }}
+        </div>
+        {% endif %}
+        
+        <form method="POST" id="sendMoneyForm" action="{{ url_for('send_money') }}">
+            <!-- Payment Method Selector -->
+            <div class="form-group">
+                <label for="payment_method">Send to</label>
+                <div class="payment-methods">
+                    <div class="method-option active" data-method="phone" id="method-phone">
+                        <i class="fas fa-phone"></i>
+                        <span>Phone</span>
+                    </div>
+                    <div class="method-option" data-method="upi" id="method-upi">
+                        <i class="fas fa-qrcode"></i>
+                        <span>UPI ID</span>
+                    </div>
+                    <div class="method-option" data-method="contact" id="method-contact">
+                        <i class="fas fa-user-friends"></i>
+                        <span>Contact</span>
+                    </div>
+                    <div class="method-option" data-method="qr" id="method-qr">
+                        <i class="fas fa-camera"></i>
+                        <span>QR Scan</span>
+                    </div>
+                </div>
+                <input type="hidden" name="payment_method" id="payment_method" value="phone" required>
+            </div>
+            
+            <!-- Identifier Input -->
+            <div class="form-group" id="identifier-group">
+                <label for="identifier" id="identifier_label">
+                    <i class="fas fa-phone"></i>
+                    Phone Number
+                </label>
+                <div class="input-with-suggestions">
+                    <input type="text" 
+                           name="identifier" 
+                           id="identifier" 
+                           placeholder="Enter phone number"
+                           required
+                           autocomplete="off"
+                           autocapitalize="none"
+                           value="">
+                    <div class="suggestions-dropdown" id="suggestions"></div>
+                </div>
+                <!-- Quick suggestion for last sent (only for phone method) -->
+                {% if last_sent_identifier and last_sent_method == 'mobile' %}
+                <div class="quick-suggestion">
+                    <span>Recently sent to: {{ last_sent_identifier }}</span>
+                    <button type="button" class="btn-use-last-sent" onclick="useLastSent()">
+                        Use
+                    </button>
+                </div>
+                {% endif %}
+                <div class="input-hint" id="input_hint">
+                    Enter 10-digit phone number starting with 6-9
+                </div>
+                <!-- UPI Auto-detection Area -->
+                <div class="upi-detection-area" id="upi_detection"></div>
+            </div>
+            
+            <!-- QR Scan Section -->
+            <div class="qr-scan-section" id="qr-scan-section" style="display: none;">
+                <div class="qr-scan-placeholder">
+                    <i class="fas fa-qrcode"></i>
+                    <h4>Scan QR Code to Pay</h4>
+                    <p>Scan a UPI QR code to automatically fill recipient details</p>
+                    <p class="qr-alternative">Use the Scan QR button in the bottom navigation</p>
+                </div>
+                
+                <!-- Recently Scanned QR Codes -->
+                <div class="recent-qr-codes" id="recent-qr-codes" style="display: none;">
+                    <h4>Recently Scanned</h4>
+                    <div class="qr-list" id="qr-list">
+                        <!-- QR codes will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contacts List -->
+            <div class="contacts-list" id="contacts_list" style="display: none;">
+                <h4>Saved Contacts</h4>
+                <div class="contacts-grid">
+                    {% for contact in contacts %}
+                    <div class="contact-card" data-phone="{{ contact.phone }}" 
+                         data-upi-id="{{ contact.upi_id if contact.upi_id else '' }}"
+                         data-name="{{ contact.username if contact.username else contact.phone }}">
+                        <div class="contact-avatar">
+                            {{ (contact.username if contact.username else contact.phone)|first|upper }}
+                        </div>
+                        <div class="contact-info">
+                            <div class="contact-name">
+                                {% if contact.username %}
+                                    {{ contact.username }}
+                                    <small>({{ contact.phone }})</small>
+                                {% else %}
+                                    {{ contact.phone }}
+                                {% endif %}
+                            </div>
+                            {% if contact.upi_id %}
+                            <div class="contact-upi">
+                                <i class="fas fa-qrcode"></i> {{ contact.upi_id }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <button type="button" class="btn-select-contact">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                    
+                    {% if not contacts %}
+                    <div class="empty-contacts">
+                        <i class="fas fa-user-plus"></i>
+                        <p>No contacts saved</p>
+                        <a href="{{ url_for('contacts') }}" class="btn-text">
+                            Add Contacts
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Amount Input -->
+            <div class="form-group">
+                <label for="amount">
+                    <i class="fas fa-rupee-sign"></i>
+                    Amount
+                </label>
+                <input type="number" 
+                       name="amount" 
+                       id="amount" 
+                       placeholder="0.00"
+                       step="0.01"
+                       min="1"
+                       max="50000"
+                       required>
+                <div class="quick-amounts">
+                    <button type="button" class="quick-amount" data-amount="100">₹100</button>
+                    <button type="button" class="quick-amount" data-amount="500">₹500</button>
+                    <button type="button" class="quick-amount" data-amount="1000">₹1,000</button>
+                    <button type="button" class="quick-amount" data-amount="5000">₹5,000</button>
+                </div>
+            </div>
+            
+            <!-- Description -->
+            <div class="form-group">
+                <label for="description">
+                    <i class="fas fa-comment-alt"></i>
+                    Description (Optional)
+                </label>
+                <input type="text" 
+                       name="description" 
+                       id="description" 
+                       placeholder="e.g., Lunch, Rent, Shopping"
+                       maxlength="100">
+            </div>
+            
+            <!-- PIN Confirmation -->
+            <div class="form-group">
+                <label for="pin">
+                    <i class="fas fa-lock"></i>
+                    Enter PIN to Confirm
+                </label>
+                <input type="password" 
+                       name="pin" 
+                       id="pin" 
+                       placeholder="6-digit PIN"
+                       maxlength="6"
+                       minlength="6"
+                       required
+                       inputmode="numeric"
+                       pattern="\d{6}">
+                <div class="input-hint">
+                    6-digit security PIN
+                </div>
+            </div>
+            
+            <!-- Receiver Info Preview -->
+            <div class="receiver-preview" id="receiver_preview" style="display: none;">
+                <div class="receiver-info">
+                    <i class="fas fa-user-check"></i>
+                    <div class="receiver-details">
+                        <div class="receiver-name" id="receiver_name">Loading...</div>
+                        <div class="receiver-identifier" id="receiver_identifier"></div>
+                        <div class="receiver-phone" id="receiver_phone" style="display: none;"></div>
+                    </div>
+                </div>
+                <div class="receiver-status" id="receiver_status"></div>
+            </div>
+            
+            <!-- QR Scan Info -->
+            <div class="qr-scan-info" id="qr_scan_info" style="display: none;">
+                <div class="qr-info-header">
+                    <i class="fas fa-qrcode"></i>
+                    <h4>QR Payment Details</h4>
+                </div>
+                <div class="qr-info-content">
+                    <div class="qr-detail-item">
+                        <span class="qr-label">Scanned From:</span>
+                        <span class="qr-value" id="qr_source">QR Code</span>
+                    </div>
+                    <div class="qr-detail-item">
+                        <span class="qr-label">Verification:</span>
+                        <span class="qr-value" id="qr_verification">Pending</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Transaction Summary -->
+            <div class="transaction-summary" id="transaction_summary" style="display: none;">
+                <h4><i class="fas fa-receipt"></i> Transaction Summary</h4>
+                <div class="summary-details">
+                    <div class="summary-row">
+                        <span>Amount</span>
+                        <span id="summary_amount">₹0.00</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Transaction Fee</span>
+                        <span id="summary_fee">₹0.00</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Total Amount</span>
+                        <span id="summary_total">₹0.00</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Balance After</span>
+                        <span id="summary_balance">₹{{ "%.2f"|format(user.balance) }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <button type="submit" class="btn-primary btn-block" id="send_button">
+                <i class="fas fa-paper-plane"></i>
+                Send Money
+            </button>
+            
+            <!-- Payment Protection Note -->
+            <div class="protection-note">
+                <i class="fas fa-shield-alt"></i>
+                <p>Your payment is protected by 256-bit encryption. EasyCash never shares your PIN with anyone.</p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Toast Notification Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<style>
+/* Send Money Page Styles */
+:root {
+    --primary-color: #1a73e8;
+    --primary-dark: #0d47a1;
+    --primary-light: #4285f4;
+    --success-color: #34a853;
+    --danger-color: #ea4335;
+    --warning-color: #fbbc04;
+    --dark-bg: #121212;
+    --dark-surface: #1e1e1e;
+    --dark-surface-light: #2d2d2d;
+    --dark-surface-lighter: #3a3a3a;
+    --dark-text: #ffffff;
+    --dark-text-secondary: #b0b0b0;
+    --border-color: #444;
+    --border-radius: 12px;
+    --transition: all 0.3s ease;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.3);
+    --primary-rgb: 26, 115, 232;
+    --success-rgb: 52, 168, 83;
+    --danger-rgb: 234, 67, 53;
+    --warning-rgb: 251, 188, 4;
+}
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    background: var(--dark-bg);
+    color: var(--dark-text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.send-money-container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+    padding-bottom: 80px;
+}
+
+/* Header Styles */
+.send-money-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding: 0 4px;
+}
+
+.btn-back {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--dark-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dark-text);
+    text-decoration: none;
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
+}
+
+.btn-back:hover {
+    background: var(--dark-surface-light);
+    transform: translateX(-2px);
+    border-color: var(--primary-color);
+}
+
+.send-money-header h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--dark-text);
+    margin: 0;
+    flex: 1;
+    text-align: center;
+}
+
+/* Balance Card */
+.send-money-balance {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    margin-bottom: 30px;
+    border-radius: var(--border-radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.send-money-balance::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--success-color), var(--primary-light));
+}
+
+.balance-label {
+    font-size: 14px;
+    opacity: 0.9;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.balance-amount-large {
+    font-size: 36px;
+    font-weight: 700;
+    margin: 12px 0;
+    letter-spacing: -0.5px;
+}
+
+.upi-id-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    margin-top: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.upi-id-display i {
+    color: var(--warning-color);
+}
+
+.btn-copy-upi {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-left: auto;
+}
+
+.btn-copy-upi:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.user-phone-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-phone-display i {
+    color: var(--success-color);
+}
+
+/* Quick Suggestion */
+.quick-suggestion {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(var(--primary-rgb), 0.1);
+    border: 1px solid rgba(var(--primary-rgb), 0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--dark-text-secondary);
+    animation: fadeIn 0.3s ease;
+}
+
+.quick-suggestion span {
+    flex: 1;
+}
+
+.btn-use-last-sent {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-left: 10px;
+}
+
+.btn-use-last-sent:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+/* Form Container */
+.send-money-form {
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+}
+
+/* Alerts */
+.alert {
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.alert-error {
+    background: rgba(var(--danger-rgb), 0.1);
+    border: 1px solid rgba(var(--danger-rgb), 0.3);
+    color: var(--danger-color);
+}
+
+.alert-success {
+    background: rgba(var(--success-rgb), 0.1);
+    border: 1px solid rgba(var(--success-rgb), 0.3);
+    color: var(--success-color);
+}
+
+.alert i {
+    font-size: 18px;
+    margin-top: 2px;
+}
+
+/* Form Groups */
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Payment Methods */
+.payment-methods {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 16px 0;
+}
+
+@media (max-width: 480px) {
+    .payment-methods {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.method-option {
+    padding: 16px 8px;
+    background: var(--dark-surface-light);
+    border-radius: var(--border-radius);
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.method-option:hover {
+    background: var(--dark-surface-lighter);
+    transform: translateY(-2px);
+    border-color: rgba(var(--primary-rgb), 0.3);
+}
+
+.method-option.active {
+    border-color: var(--primary-color);
+    background: var(--dark-surface-lighter);
+    position: relative;
+}
+
+.method-option.active::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 3px;
+    background: var(--primary-color);
+    border-radius: 2px;
+}
+
+.method-option i {
+    font-size: 24px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.method-option[data-method="phone"] i {
+    color: var(--success-color);
+}
+
+.method-option[data-method="upi"] i {
+    color: var(--warning-color);
+}
+
+.method-option[data-method="contact"] i {
+    color: var(--primary-color);
+}
+
+.method-option[data-method="qr"] i {
+    color: var(--danger-color);
+}
+
+.method-option span {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--dark-text);
+}
+
+/* Input Fields */
+.input-with-suggestions {
+    position: relative;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 16px;
+    background: var(--dark-surface-light);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--dark-text);
+    font-size: 16px;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.form-group input.error {
+    border-color: var(--danger-color);
+    box-shadow: 0 0 0 3px rgba(var(--danger-rgb), 0.1);
+}
+
+.form-group input.success {
+    border-color: var(--success-color);
+    box-shadow: 0 0 0 3px rgba(var(--success-rgb), 0.1);
+}
+
+.input-hint {
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    margin-top: 8px;
+    line-height: 1.5;
+}
+
+/* Suggestions Dropdown */
+.suggestions-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: var(--shadow-lg);
+    margin-top: 5px;
+}
+
+.suggestion-item {
+    padding: 14px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.suggestion-item:hover {
+    background: var(--dark-surface-light);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.suggestion-item .info {
+    flex: 1;
+    min-width: 0;
+}
+
+.suggestion-item .name {
+    font-weight: 600;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--dark-text);
+}
+
+.suggestion-item .upi,
+.suggestion-item .phone {
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Contacts List */
+.contacts-list {
+    margin: 20px 0;
+    background: var(--dark-surface-light);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.contacts-list h4 {
+    color: var(--dark-text);
+    margin-bottom: 16px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.contacts-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.contact-card {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+    cursor: pointer;
+    border: 1px solid transparent;
+    position: relative;
+}
+
+.contact-card:hover {
+    background: var(--dark-surface-lighter);
+    transform: translateX(5px);
+    border-color: var(--primary-color);
+}
+
+.contact-card.selected {
+    background: rgba(var(--primary-rgb), 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+.contact-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 16px;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.contact-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.contact-name {
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--dark-text);
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.contact-name small {
+    font-weight: normal;
+    opacity: 0.7;
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+}
+
+.contact-upi {
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.contact-upi i {
+    font-size: 10px;
+}
+
+.btn-select-contact {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: transparent;
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.btn-select-contact:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.1);
+}
+
+.empty-contacts {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--dark-text-secondary);
+}
+
+.empty-contacts i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-contacts p {
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+/* Quick Amounts */
+.quick-amounts {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.quick-amount {
+    padding: 12px 20px;
+    background: var(--dark-surface-light);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    color: var(--dark-text);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    flex: 1;
+    min-width: 80px;
+    text-align: center;
+}
+
+.quick-amount:hover {
+    background: var(--dark-surface-lighter);
+    transform: translateY(-2px);
+    border-color: var(--primary-color);
+}
+
+.quick-amount.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
+}
+
+/* Receiver Preview */
+.receiver-preview {
+    background: var(--dark-surface-light);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin: 20px 0;
+    border-left: 4px solid var(--primary-color);
+    display: none;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.receiver-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.receiver-info i {
+    font-size: 28px;
+}
+
+.receiver-info i.fa-user-check {
+    color: var(--success-color);
+}
+
+.receiver-info i.fa-user-clock {
+    color: var(--warning-color);
+}
+
+.receiver-details {
+    flex: 1;
+}
+
+.receiver-name {
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--dark-text);
+    margin-bottom: 6px;
+}
+
+.receiver-identifier {
+    font-size: 14px;
+    color: var(--dark-text-secondary);
+    font-family: monospace;
+    word-break: break-all;
+}
+
+.receiver-phone {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    margin-top: 4px;
+}
+
+.receiver-phone i {
+    font-size: 10px;
+}
+
+.receiver-status {
+    font-size: 14px;
+    padding-left: 44px;
+    font-weight: 500;
+}
+
+.receiver-status.success {
+    color: var(--success-color);
+}
+
+.receiver-status.warning {
+    color: var(--warning-color);
+}
+
+/* Transaction Summary */
+.transaction-summary {
+    background: var(--dark-surface-light);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin: 20px 0;
+    display: none;
+    animation: slideIn 0.3s ease;
+}
+
+.transaction-summary h4 {
+    margin: 0 0 16px 0;
+    color: var(--dark-text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.summary-details {
+    background: var(--dark-surface);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+}
+
+.summary-row.total {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--primary-color);
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 2px solid var(--border-color);
+}
+
+/* Submit Button */
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border: none;
+    padding: 18px;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    transition: var(--transition);
+    margin-top: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-primary:hover::before {
+    left: 100%;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn-primary:disabled:hover {
+    box-shadow: none;
+}
+
+/* Protection Note */
+.protection-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(var(--primary-rgb), 0.1);
+    border-radius: var(--border-radius);
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--dark-text-secondary);
+    line-height: 1.5;
+    border: 1px solid rgba(var(--primary-rgb), 0.2);
+}
+
+.protection-note i {
+    color: var(--primary-color);
+    margin-top: 2px;
+    font-size: 18px;
+}
+
+/* UPI Detection Area */
+.upi-detection-area {
+    margin-top: 12px;
+    padding: 16px;
+    background: rgba(var(--primary-rgb), 0.05);
+    border-radius: var(--border-radius);
+    border: 1px dashed rgba(var(--primary-rgb), 0.3);
+    animation: fadeIn 0.3s ease;
+    display: none;
+}
+
+.upi-user-found {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: rgba(var(--success-rgb), 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(var(--success-rgb), 0.3);
+}
+
+.upi-user-found i {
+    color: var(--success-color);
+    font-size: 24px;
+}
+
+.upi-user-found .upi-name {
+    font-weight: 600;
+    color: var(--dark-text);
+    margin-bottom: 4px;
+}
+
+.upi-user-found .upi-id {
+    font-size: 14px;
+    color: var(--dark-text-secondary);
+    font-family: monospace;
+}
+
+.upi-user-found .upi-phone {
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    margin-top: 2px;
+}
+
+/* QR Scan Section */
+.qr-scan-section {
+    margin: 20px 0;
+}
+
+.qr-scan-placeholder {
+    text-align: center;
+    padding: 40px 20px;
+    background: var(--dark-surface-light);
+    border-radius: var(--border-radius);
+    border: 2px dashed var(--border-color);
+}
+
+.qr-scan-placeholder i {
+    font-size: 64px;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    opacity: 0.7;
+}
+
+.qr-scan-placeholder h4 {
+    margin: 0 0 12px 0;
+    color: var(--dark-text);
+    font-size: 20px;
+}
+
+.qr-scan-placeholder p {
+    color: var(--dark-text-secondary);
+    margin-bottom: 8px;
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+.qr-alternative {
+    font-size: 14px;
+    color: var(--primary-color);
+    font-weight: 500;
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(var(--primary-rgb), 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(var(--primary-rgb), 0.3);
+}
+
+/* Recent QR Codes */
+.recent-qr-codes {
+    margin-top: 24px;
+}
+
+.recent-qr-codes h4 {
+    color: var(--dark-text);
+    margin-bottom: 16px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.qr-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.qr-item {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    background: var(--dark-surface-light);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.qr-item:hover {
+    background: var(--dark-surface-lighter);
+    border-color: var(--primary-color);
+    transform: translateX(4px);
+}
+
+.qr-item-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 16px;
+    flex-shrink: 0;
+}
+
+.qr-item-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.qr-item-name {
+    font-weight: 600;
+    color: var(--dark-text);
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.qr-item-identifier {
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    font-family: monospace;
+    word-break: break-all;
+}
+
+.qr-item-date {
+    font-size: 11px;
+    color: var(--dark-text-secondary);
+    margin-top: 4px;
+}
+
+.qr-item-action {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+
+.qr-item-action:hover {
+    background: var(--primary-dark);
+    transform: scale(1.1);
+}
+
+/* QR Scan Info */
+.qr-scan-info {
+    background: var(--dark-surface-light);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin: 20px 0;
+    display: none;
+    animation: slideIn 0.3s ease;
+}
+
+.qr-info-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.qr-info-header i {
+    font-size: 24px;
+    color: var(--primary-color);
+}
+
+.qr-info-header h4 {
+    margin: 0;
+    color: var(--dark-text);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.qr-info-content {
+    background: var(--dark-surface);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.qr-detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.qr-detail-item:last-child {
+    border-bottom: none;
+}
+
+.qr-label {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.qr-value {
+    font-weight: 500;
+    color: var(--dark-text);
+    font-size: 14px;
+}
+
+.qr-value.success {
+    color: var(--success-color);
+}
+
+.qr-value.warning {
+    color: var(--warning-color);
+}
+
+/* Self Transfer Warning */
+.self-transfer-warning {
+    background: rgba(var(--warning-rgb), 0.1);
+    border: 1px solid rgba(var(--warning-rgb), 0.3);
+    color: var(--warning-color);
+    padding: 16px;
+    border-radius: 8px;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.self-transfer-warning i {
+    font-size: 18px;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Toast Container */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 90%;
+    pointer-events: none;
+}
+
+.toast {
+    padding: 16px 24px;
+    background: var(--dark-surface);
+    color: var(--dark-text);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideUp 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+    max-width: 400px;
+    pointer-events: auto;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}
+
+.toast.success {
+    background: rgba(var(--success-rgb), 0.9);
+    color: white;
+    border-color: rgba(var(--success-rgb), 0.3);
+}
+
+.toast.error {
+    background: rgba(var(--danger-rgb), 0.9);
+    color: white;
+    border-color: rgba(var(--danger-rgb), 0.3);
+}
+
+.toast.warning {
+    background: rgba(var(--warning-rgb), 0.9);
+    color: #333;
+    border-color: rgba(var(--warning-rgb), 0.3);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--dark-surface-light);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--dark-text-secondary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+/* Selection color */
+::selection {
+    background: rgba(var(--primary-rgb), 0.3);
+    color: white;
+}
+
+/* Placeholder styling */
+::placeholder {
+    color: var(--dark-text-secondary);
+    opacity: 0.7;
+}
+
+/* Disabled state styling */
+:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 480px) {
+    .send-money-container {
+        padding: 16px;
+    }
+    
+    .send-money-header {
+        margin-bottom: 20px;
+    }
+    
+    .send-money-header h2 {
+        font-size: 20px;
+    }
+    
+    .send-money-balance {
+        padding: 20px;
+    }
+    
+    .balance-amount-large {
+        font-size: 32px;
+    }
+    
+    .send-money-form {
+        padding: 20px;
+    }
+    
+    .payment-methods {
+        gap: 8px;
+    }
+    
+    .method-option {
+        padding: 14px 6px;
+    }
+    
+    .method-option i {
+        font-size: 20px;
+        margin-bottom: 6px;
+    }
+    
+    .method-option span {
+        font-size: 11px;
+    }
+    
+    .form-group input {
+        padding: 14px;
+        font-size: 15px;
+    }
+    
+    .contact-card {
+        padding: 14px;
+    }
+    
+    .contact-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+        margin-right: 12px;
+    }
+    
+    .quick-amounts {
+        gap: 8px;
+    }
+    
+    .quick-amount {
+        padding: 10px 16px;
+        font-size: 13px;
+        min-width: 70px;
+    }
+    
+    .btn-primary {
+        padding: 16px;
+        font-size: 15px;
+    }
+    
+    .protection-note {
+        padding: 14px;
+        font-size: 13px;
+    }
+    
+    .toast {
+        padding: 14px 20px;
+        font-size: 14px;
+    }
+    
+    .qr-scan-placeholder {
+        padding: 30px 16px;
+    }
+    
+    .qr-scan-placeholder i {
+        font-size: 56px;
+        margin-bottom: 16px;
+    }
+    
+    .qr-scan-placeholder h4 {
+        font-size: 18px;
+    }
+    
+    .qr-scan-placeholder p {
+        font-size: 13px;
+    }
+}
+
+/* Tablet Responsiveness */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .send-money-container {
+        max-width: 600px;
+        padding: 30px;
+    }
+    
+    .send-money-balance {
+        padding: 30px;
+    }
+    
+    .balance-amount-large {
+        font-size: 40px;
+    }
+    
+    .send-money-form {
+        padding: 30px;
+    }
+    
+    .payment-methods {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+    }
+    
+    .method-option {
+        padding: 20px 12px;
+    }
+    
+    .method-option i {
+        font-size: 28px;
+    }
+    
+    .method-option span {
+        font-size: 13px;
+    }
+}
+
+/* Large Screen Responsiveness */
+@media (min-width: 1025px) {
+    .send-money-container {
+        max-width: 500px;
+    }
+}
+
+/* Focus visible for keyboard navigation */
+:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Screen reader only */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Validation states */
+.valid-feedback {
+    display: none;
+    color: var(--success-color);
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.invalid-feedback {
+    display: none;
+    color: var(--danger-color);
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+input:valid ~ .valid-feedback {
+    display: block;
+}
+
+input:invalid ~ .invalid-feedback {
+    display: block;
+}
+
+/* Required field indicator */
+.form-group label:has(input:required)::after {
+    content: ' *';
+    color: var(--danger-color);
+}
+</style>
+
+<script>
+// Main JavaScript for Send Money Page
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Send Money Page Loaded - Phone Based System');
+    
+    // Initialize payment method tabs
+    initPaymentMethods();
+    
+    // Initialize quick amount buttons
+    initQuickAmounts();
+    
+    // Initialize contact selection
+    initContactSelection();
+    
+    // Setup event listeners
+    setupEventListeners();
+    
+    // Load recent QR scans from localStorage
+    loadRecentQrScans();
+    
+    // Check if we have QR data from the bottom nav scanner
+    checkForQRData();
+    
+    // Check if we have a contact pre-filled from URL
+    checkForPrefilledContact();
+    
+    // Setup toast container
+    setupToastContainer();
+});
+
+// Check for contact pre-filled from URL
+function checkForPrefilledContact() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const contactPhone = urlParams.get('contact');
+    
+    if (contactPhone) {
+        console.log('Found pre-filled contact:', contactPhone);
+        
+        // Switch to contact method
+        document.getElementById('method-contact').click();
+        
+        // Find and select the contact
+        setTimeout(() => {
+            const contactCard = document.querySelector(`.contact-card[data-phone="${contactPhone}"]`);
+            if (contactCard) {
+                selectContact(contactCard);
+            } else {
+                // If contact not in list, fill phone field
+                document.getElementById('identifier').value = contactPhone;
+                const inputEvent = new Event('input', { bubbles: true });
+                document.getElementById('identifier').dispatchEvent(inputEvent);
+            }
+        }, 100);
+    }
+}
+
+// Check for QR data from bottom nav scanner
+function checkForQRData() {
+    const qrData = getStoredQrData();
+    if (qrData && (qrData.upi_id || qrData.phone)) {
+        console.log('Found QR data from scanner:', qrData);
+        
+        // Auto-select QR method
+        document.getElementById('method-qr').click();
+        
+        // Populate the form with QR data
+        setTimeout(() => {
+            populateFromQrData(qrData);
+        }, 100);
+        
+        // Clear the stored data after using it
+        localStorage.removeItem('last_qr_scan');
+    }
+}
+
+function useLastSent() {
+    const lastSentIdentifier = '{{ last_sent_identifier if last_sent_identifier else "" }}';
+    if (lastSentIdentifier) {
+        document.getElementById('identifier').value = lastSentIdentifier;
+        const inputEvent = new Event('input', { bubbles: true });
+        document.getElementById('identifier').dispatchEvent(inputEvent);
+        showToast('Last sent identifier loaded', 'success');
+    }
+}
+
+function initPaymentMethods() {
+    const paymentMethodOptions = document.querySelectorAll('.method-option');
+    
+    paymentMethodOptions.forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const method = this.dataset.method;
+            console.log('Changing method to:', method);
+            
+            // Remove active class from all
+            paymentMethodOptions.forEach(opt => opt.classList.remove('active'));
+            
+            // Add active class to clicked
+            this.classList.add('active');
+            
+            // Update the hidden input
+            document.getElementById('payment_method').value = method;
+            
+            // Setup the selected method
+            setupPaymentMethod(method);
+        });
+    });
+}
+
+function initQuickAmounts() {
+    const quickAmounts = document.querySelectorAll('.quick-amount');
+    const amountInput = document.getElementById('amount');
+    
+    quickAmounts.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const amount = this.dataset.amount;
+            
+            // Set amount
+            amountInput.value = amount;
+            
+            // Trigger input event
+            const inputEvent = new Event('input', { bubbles: true });
+            amountInput.dispatchEvent(inputEvent);
+            
+            // Update active state
+            quickAmounts.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Visual feedback
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 150);
+        });
+    });
+}
+
+function initContactSelection() {
+    const contactCards = document.querySelectorAll('.contact-card');
+    
+    contactCards.forEach(card => {
+        const btnSelect = card.querySelector('.btn-select-contact');
+        if (btnSelect) {
+            btnSelect.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                selectContact(card);
+            });
+        }
+        
+        card.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!e.target.classList.contains('btn-select-contact')) {
+                selectContact(card);
+            }
+        });
+    });
+}
+
+function setupEventListeners() {
+    const identifierInput = document.getElementById('identifier');
+    const amountInput = document.getElementById('amount');
+    const form = document.getElementById('sendMoneyForm');
+    const pinInput = document.getElementById('pin');
+    
+    let debounceTimer = null;
+    
+    // Validate identifier on input with debounce
+    identifierInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const identifier = this.value.trim();
+        
+        // Clear states
+        clearSuggestions();
+        hideReceiverPreview();
+        hideTransactionSummary();
+        clearUPIDetection();
+        
+        // Remove error/success classes
+        this.classList.remove('error', 'success');
+        
+        if (identifier.length > 0) {
+            // Get current method
+            const currentMethod = document.getElementById('payment_method').value;
+            const config = getMethodConfig(currentMethod);
+            
+            // Validate format
+            if (config && config.validation && config.validation(identifier)) {
+                this.classList.add('success');
+                debounceTimer = setTimeout(() => {
+                    processIdentifier(identifier, currentMethod);
+                }, 500);
+            } else if (config && config.validation) {
+                this.classList.add('error');
+                const methodName = currentMethod === 'phone' ? 'phone number' : currentMethod;
+                showToast(`Invalid ${methodName} format`, 'error');
+            }
+        }
+    });
+    
+    // Validate on blur
+    identifierInput.addEventListener('blur', function() {
+        const identifier = this.value.trim();
+        const currentMethod = document.getElementById('payment_method').value;
+        
+        if (identifier) {
+            const config = getMethodConfig(currentMethod);
+            if (config && config.validation && !config.validation(identifier)) {
+                const methodName = currentMethod === 'phone' ? 'phone number' : currentMethod;
+                showToast(`Invalid ${methodName} format`, 'error');
+            }
+        }
+    });
+    
+    // Auto-focus on amount when identifier is valid
+    identifierInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const identifier = this.value.trim();
+            const currentMethod = document.getElementById('payment_method').value;
+            const config = getMethodConfig(currentMethod);
+            
+            if (config && config.validation && config.validation(identifier)) {
+                document.getElementById('amount').focus();
+            }
+        }
+    });
+    
+    // Update transaction summary on amount change
+    amountInput.addEventListener('input', function() {
+        updateTransactionSummary();
+        // Clear quick amounts active state
+        document.querySelectorAll('.quick-amount').forEach(btn => btn.classList.remove('active'));
+    });
+    
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (validateForm()) {
+            showConfirmation();
+        }
+    });
+    
+    // PIN input formatting
+    pinInput.addEventListener('input', function() {
+        // Only allow numbers
+        this.value = this.value.replace(/\D/g, '');
+        
+        // Limit to 6 digits
+        if (this.value.length > 6) {
+            this.value = this.value.slice(0, 6);
+        }
+    });
+}
+
+function setupPaymentMethod(method) {
+    console.log('Setting up payment method:', method);
+    
+    // Update UI elements
+    const config = getMethodConfig(method);
+    const identifierLabel = document.getElementById('identifier_label');
+    const identifierInput = document.getElementById('identifier');
+    const inputHint = document.getElementById('input_hint');
+    const contactsList = document.getElementById('contacts_list');
+    const identifierGroup = document.getElementById('identifier-group');
+    const qrScanSection = document.getElementById('qr-scan-section');
+    
+    // Clear fields when switching methods
+    identifierInput.value = '';
+    identifierInput.classList.remove('error', 'success');
+    clearSuggestions();
+    hideReceiverPreview();
+    hideTransactionSummary();
+    clearUPIDetection();
+    clearQuickAmounts();
+    clearSelectedContact();
+    
+    if (method === 'qr') {
+        // Show QR scan section, hide identifier input
+        identifierGroup.style.display = 'none';
+        qrScanSection.style.display = 'block';
+        contactsList.style.display = 'none';
+        
+        // Hide QR scan info initially
+        document.getElementById('qr_scan_info').style.display = 'none';
+        
+    } else if (method === 'contact') {
+        // Show contacts list, hide identifier input
+        identifierGroup.style.display = 'none';
+        qrScanSection.style.display = 'none';
+        contactsList.style.display = 'block';
+        
+    } else {
+        // Show identifier input, hide QR scan section and contacts list
+        identifierGroup.style.display = 'block';
+        qrScanSection.style.display = 'none';
+        contactsList.style.display = 'none';
+        
+        if (config && identifierLabel && identifierInput && inputHint) {
+            // Update label and placeholder
+            identifierLabel.innerHTML = `<i class="${config.icon}"></i> ${config.label}`;
+            identifierInput.placeholder = config.placeholder;
+            inputHint.textContent = config.hint;
+            
+            // Set input pattern if exists
+            if (config.pattern) {
+                identifierInput.pattern = config.pattern;
+            } else {
+                identifierInput.removeAttribute('pattern');
+            }
+            
+            // Focus on identifier input
+            setTimeout(() => {
+                identifierInput.focus();
+            }, 100);
+        }
+    }
+}
+
+function getMethodConfig(method) {
+    const configs = {
+        phone: {
+            label: 'Phone Number',
+            placeholder: 'Enter 10-digit phone number',
+            hint: 'Enter 10-digit phone number starting with 6-9',
+            icon: 'fas fa-phone',
+            pattern: '^[6-9][0-9]{9}$',
+            validation: function(value) {
+                // Strict phone validation: must be exactly 10 digits starting with 6-9
+                return /^[6-9]\d{9}$/.test(value) && !value.includes('@');
+            }
+        },
+        upi: {
+            label: 'UPI ID',
+            placeholder: 'Enter UPI ID (e.g., username@easycash)',
+            hint: 'Enter valid UPI ID format: username@provider',
+            icon: 'fas fa-qrcode',
+            pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+$',
+            validation: function(value) {
+                // Strict UPI validation: must contain @ symbol
+                return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+$/.test(value);
+            }
+        },
+        contact: {
+            label: 'Phone Number',
+            placeholder: 'Select from contacts',
+            hint: 'Choose a contact from your saved contacts',
+            icon: 'fas fa-user-friends'
+        },
+        qr: {
+            label: 'QR Code',
+            placeholder: 'Scan QR code',
+            hint: 'Scan a UPI QR code to pay',
+            icon: 'fas fa-camera'
+        }
+    };
+    
+    return configs[method] || configs.phone;
+}
+
+function selectContact(card) {
+    // Clear previous selection
+    document.querySelectorAll('.contact-card').forEach(c => c.classList.remove('selected'));
+    
+    // Set current selection
+    card.classList.add('selected');
+    
+    const phone = card.dataset.phone;
+    const upiId = card.dataset.upiId;
+    const name = card.dataset.name;
+    
+    console.log('Selecting contact:', { phone, upiId, name });
+    
+    // Set identifier based on availability
+    let identifier = phone;
+    if (upiId && document.getElementById('payment_method').value === 'upi') {
+        identifier = upiId;
+    }
+    
+    // Show receiver preview
+    showReceiverPreview({
+        exists: true,
+        name: name,
+        phone: phone,
+        identifier: identifier,
+        upi_id: upiId || null,
+        message: 'EasyCash user • Instant transfer'
+    });
+    
+    // Show transaction summary if amount is entered
+    const amountInput = document.getElementById('amount');
+    if (amountInput.value) {
+        updateTransactionSummary();
+    }
+}
+
+async function processIdentifier(identifier, method) {
+    if (!identifier) return;
+    
+    console.log(`Processing ${method} identifier:`, identifier);
+    
+    try {
+        // Clear any existing self-transfer warnings
+        clearSelfTransferWarning();
+        
+        // Check if identifier is empty or just spaces
+        if (identifier.trim() === '') {
+            clearUPIDetection();
+            hideReceiverPreview();
+            return;
+        }
+        
+        switch(method) {
+            case 'phone':
+                // First validate phone format strictly
+                const phoneRegex = /^[6-9]\d{9}$/;
+                if (!phoneRegex.test(identifier)) {
+                    showToast('Invalid phone number format. Must be 10 digits starting with 6-9', 'error');
+                    return;
+                }
+                await validatePhoneIdentifier(identifier);
+                break;
+                
+            case 'upi':
+                // First validate UPI format strictly
+                const upiRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+$/;
+                if (!upiRegex.test(identifier)) {
+                    showToast('Invalid UPI ID format. Use format: username@provider', 'error');
+                    return;
+                }
+                await validateUPIIdentifier(identifier);
+                break;
+        }
+    } catch (error) {
+        console.error('Error processing identifier:', error);
+        showToast('Failed to validate recipient', 'error');
+    }
+}
+
+async function validatePhoneIdentifier(identifier) {
+    try {
+        // First, check if user is trying to send to themselves
+        const currentUserPhone = '{{ user.phone }}';
+        if (identifier === currentUserPhone) {
+            showSelfTransferWarning('You cannot send money to your own phone number');
+            return;
+        }
+        
+        // Show loading state
+        showLoadingIndicator(identifier);
+        
+        // Make API call to lookup phone number - Use the correct endpoint
+        const response = await fetch(`/api/mobile-lookup?mobile=${encodeURIComponent(identifier)}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        
+        const data = await response.json();
+        
+        console.log('Phone lookup response:', data);
+        
+        if (data.exists) {
+            // User found in EasyCash
+            showReceiverPreview({
+                exists: true,
+                name: data.username || `User ${identifier.slice(-4)}`,
+                phone: data.phone,
+                identifier: identifier,
+                upi_id: data.upi_id || null,
+                message: 'EasyCash user • Instant transfer'
+            });
+        } else if (data.error && data.error.includes('yourself')) {
+            // Self transfer attempt
+            showSelfTransferWarning(data.error);
+        } else {
+            // User not found in EasyCash
+            showReceiverPreview({
+                exists: false,
+                name: `User ${identifier.slice(-4)}`,
+                phone: identifier,
+                identifier: identifier,
+                message: 'Phone number not registered with EasyCash • External transfer'
+            });
+        }
+        
+    } catch (error) {
+        console.error('Phone validation error:', error);
+        // Fallback - treat as external user
+        showReceiverPreview({
+            exists: false,
+            name: `User ${identifier.slice(-4)}`,
+            phone: identifier,
+            identifier: identifier,
+            message: 'Phone transfer • May take longer'
+        });
+    }
+}
+
+async function validateUPIIdentifier(identifier) {
+    try {
+        // First, check if user is trying to send to themselves
+        const currentUserUPI = '{{ user.upi_id if user and user.upi_id else "" }}';
+        if (identifier.toLowerCase() === currentUserUPI.toLowerCase()) {
+            showSelfTransferWarning('You cannot send money to your own UPI ID');
+            return;
+        }
+        
+        // Show loading state
+        const upiDetection = document.getElementById('upi_detection');
+        upiDetection.innerHTML = `
+            <div style="text-align: center; padding: 10px; color: var(--dark-text-secondary);">
+                <div class="loading-spinner" style="margin: 0 auto 10px;"></div>
+                <div>Looking up UPI ID...</div>
+            </div>
+        `;
+        upiDetection.style.display = 'block';
+        
+        // Make API call to lookup UPI ID
+        const response = await fetch(`/api/upi-lookup?upi_id=${encodeURIComponent(identifier)}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        
+        const data = await response.json();
+        
+        console.log('UPI lookup response:', data);
+        
+        if (data.exists) {
+            // Check if user is trying to send to themselves by phone
+            const currentPhone = '{{ user.phone }}';
+            if (data.phone === currentPhone) {
+                showSelfTransferWarning('You cannot send money to yourself');
+                return;
+            }
+            
+            // User found in EasyCash
+            showUPIDetection({
+                exists: true,
+                name: data.username,
+                phone: data.phone,
+                upi_id: data.upi_id
+            });
+            
+            showReceiverPreview({
+                exists: true,
+                name: data.username,
+                phone: data.phone,
+                identifier: data.upi_id,
+                message: 'EasyCash user • Instant transfer'
+            });
+        } else {
+            // User not found in EasyCash
+            showUPIDetection({
+                exists: false,
+                upi_id: identifier
+            });
+            
+            showReceiverPreview({
+                exists: false,
+                name: identifier.split('@')[0],
+                phone: '',
+                identifier: identifier,
+                message: 'UPI ID not registered with EasyCash • External transfer'
+            });
+        }
+        
+    } catch (error) {
+        console.error('UPI validation error:', error);
+        showToast('Failed to validate UPI ID', 'error');
+        
+        // Fallback to showing the UPI ID without user lookup
+        showUPIDetection({
+            exists: false,
+            upi_id: identifier
+        });
+        
+        showReceiverPreview({
+            exists: false,
+            name: identifier.split('@')[0],
+            phone: '',
+            identifier: identifier,
+            message: 'UPI transfer • May take longer'
+        });
+    }
+}
+
+function showLoadingIndicator(identifier) {
+    const upiDetection = document.getElementById('upi_detection');
+    upiDetection.innerHTML = `
+        <div style="text-align: center; padding: 10px; color: var(--dark-text-secondary);">
+            <div class="loading-spinner" style="margin: 0 auto 10px;"></div>
+            <div>Looking up phone number...</div>
+        </div>
+    `;
+    upiDetection.style.display = 'block';
+}
+
+function showSelfTransferWarning(message) {
+    // Clear any existing warning
+    const existingWarning = document.querySelector('.self-transfer-warning');
+    if (existingWarning) {
+        existingWarning.remove();
+    }
+    
+    // Create warning message
+    const warning = document.createElement('div');
+    warning.className = 'self-transfer-warning';
+    warning.innerHTML = `
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>${message}</span>
+    `;
+    
+    // Insert after the identifier input
+    const identifierInput = document.getElementById('identifier');
+    if (identifierInput) {
+        identifierInput.parentNode.insertBefore(warning, identifierInput.nextSibling);
+        
+        // Add error class to input
+        identifierInput.classList.remove('success');
+        identifierInput.classList.add('error');
+    }
+    
+    // Hide receiver preview if shown
+    hideReceiverPreview();
+}
+
+function clearSelfTransferWarning() {
+    const existingWarning = document.querySelector('.self-transfer-warning');
+    if (existingWarning) {
+        existingWarning.remove();
+    }
+}
+
+function showUPIDetection(user) {
+    const upiDetection = document.getElementById('upi_detection');
+    upiDetection.innerHTML = '';
+    
+    if (user.exists) {
+        upiDetection.innerHTML = `
+            <div class="upi-user-found">
+                <i class="fas fa-user-check"></i>
+                <div>
+                    <div class="upi-name">${user.name || 'EasyCash User'}</div>
+                    <div class="upi-id">${user.upi_id}</div>
+                    ${user.phone ? `<div class="upi-phone"><i class="fas fa-phone"></i> ${user.phone}</div>` : ''}
+                </div>
+            </div>
+        `;
+    } else {
+        upiDetection.innerHTML = `
+            <div style="text-align: center; color: var(--dark-text-secondary); padding: 10px; font-size: 14px;">
+                <i class="fas fa-info-circle"></i>
+                <div style="margin-top: 5px;">
+                    This UPI ID is not registered with EasyCash.<br>
+                    You can still send money via UPI network.
+                </div>
+            </div>
+        `;
+    }
+    
+    upiDetection.style.display = 'block';
+}
+
+function clearUPIDetection() {
+    const upiDetection = document.getElementById('upi_detection');
+    upiDetection.innerHTML = '';
+    upiDetection.style.display = 'none';
+    
+    // Also clear any self-transfer warning
+    const existingWarning = document.querySelector('.self-transfer-warning');
+    if (existingWarning) {
+        existingWarning.remove();
+    }
+}
+
+function showSuggestions(users) {
+    const suggestions = document.getElementById('suggestions');
+    const identifierInput = document.getElementById('identifier');
+    
+    suggestions.innerHTML = '';
+    
+    users.forEach(user => {
+        const suggestion = document.createElement('div');
+        suggestion.className = 'suggestion-item';
+        
+        suggestion.innerHTML = `
+            <div class="avatar">${(user.username || user.phone || 'U')[0].toUpperCase()}</div>
+            <div class="info">
+                <div class="name">${user.username || user.phone}</div>
+                ${user.upi_id ? `<div class="upi">${user.upi_id}</div>` : ''}
+                ${user.phone ? `<div class="phone"><i class="fas fa-phone"></i> ${user.phone}</div>` : ''}
+            </div>
+        `;
+        
+        suggestion.addEventListener('click', function() {
+            // Determine what to fill based on current payment method
+            const currentMethod = document.getElementById('payment_method').value;
+            
+            if (currentMethod === 'upi' && user.upi_id) {
+                identifierInput.value = user.upi_id;
+            } else if (currentMethod === 'phone' && user.phone) {
+                identifierInput.value = user.phone;
+            } else {
+                identifierInput.value = user.phone || user.upi_id;
+            }
+            
+            identifierInput.classList.add('success');
+            
+            // Trigger input event
+            const inputEvent = new Event('input', { bubbles: true });
+            identifierInput.dispatchEvent(inputEvent);
+            
+            clearSuggestions();
+            
+            // Show receiver preview
+            showReceiverPreview({
+                exists: true,
+                name: user.username,
+                phone: user.phone,
+                identifier: identifierInput.value,
+                message: 'EasyCash user • Instant transfer'
+            });
+        });
+        
+        suggestions.appendChild(suggestion);
+    });
+    
+    suggestions.style.display = 'block';
+}
+
+function clearSuggestions() {
+    const suggestions = document.getElementById('suggestions');
+    suggestions.innerHTML = '';
+    suggestions.style.display = 'none';
+}
+
+function showReceiverPreview(user) {
+    const receiverPreview = document.getElementById('receiver_preview');
+    const receiverName = document.getElementById('receiver_name');
+    const receiverIdentifier = document.getElementById('receiver_identifier');
+    const receiverPhone = document.getElementById('receiver_phone');
+    const receiverStatus = document.getElementById('receiver_status');
+    
+    receiverPreview.style.display = 'block';
+    
+    const displayIdentifier = user.identifier || user.upi_id || user.phone;
+    const displayName = user.name || user.username || user.phone || displayIdentifier;
+    
+    if (user.exists) {
+        receiverName.textContent = displayName;
+        receiverIdentifier.textContent = displayIdentifier;
+        
+        // Show phone separately if available
+        if (user.phone && user.identifier !== user.phone) {
+            receiverPhone.innerHTML = `<i class="fas fa-phone"></i> ${user.phone}`;
+            receiverPhone.style.display = 'block';
+        } else {
+            receiverPhone.style.display = 'none';
+        }
+        
+        receiverStatus.textContent = user.message || 'EasyCash user • Instant transfer';
+        receiverStatus.className = 'receiver-status success';
+        receiverPreview.style.borderLeftColor = 'var(--success-color)';
+        receiverPreview.querySelector('i').className = 'fas fa-user-check';
+    } else {
+        receiverName.textContent = displayName;
+        receiverIdentifier.textContent = displayIdentifier;
+        
+        // Show phone if available
+        if (user.phone) {
+            receiverPhone.innerHTML = `<i class="fas fa-phone"></i> ${user.phone}`;
+            receiverPhone.style.display = 'block';
+        } else {
+            receiverPhone.style.display = 'none';
+        }
+        
+        receiverStatus.textContent = user.message || 'External recipient • May take longer';
+        receiverStatus.className = 'receiver-status warning';
+        receiverPreview.style.borderLeftColor = 'var(--warning-color)';
+        receiverPreview.querySelector('i').className = 'fas fa-user-clock';
+    }
+    
+    // Clear any self-transfer warning
+    const existingWarning = document.querySelector('.self-transfer-warning');
+    if (existingWarning) {
+        existingWarning.remove();
+    }
+    
+    // Show transaction summary if amount is entered
+    const amountInput = document.getElementById('amount');
+    if (amountInput.value) {
+        updateTransactionSummary();
+    }
+}
+
+function hideReceiverPreview() {
+    const receiverPreview = document.getElementById('receiver_preview');
+    receiverPreview.style.display = 'none';
+}
+
+function updateTransactionSummary() {
+    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    const transactionSummary = document.getElementById('transaction_summary');
+    
+    if (amount > 0) {
+        const fee = calculateTransactionFee(amount);
+        const total = amount + fee;
+        const currentBalance = parseFloat('{{ user.balance }}');
+        const balanceAfter = currentBalance - total;
+        
+        document.getElementById('summary_amount').textContent = `₹${amount.toFixed(2)}`;
+        document.getElementById('summary_fee').textContent = fee > 0 ? `₹${fee.toFixed(2)}` : 'Free';
+        document.getElementById('summary_total').textContent = `₹${total.toFixed(2)}`;
+        document.getElementById('summary_balance').textContent = `₹${balanceAfter.toFixed(2)}`;
+        
+        transactionSummary.style.display = 'block';
+        
+        // Update button text based on amount
+        const sendButton = document.getElementById('send_button');
+        if (amount > 0 && sendButton) {
+            sendButton.innerHTML = `<i class="fas fa-paper-plane"></i> Send ₹${amount.toFixed(2)}`;
+        }
+    } else {
+        hideTransactionSummary();
+        const sendButton = document.getElementById('send_button');
+        if (sendButton) {
+            sendButton.innerHTML = `<i class="fas fa-paper-plane"></i> Send Money`;
+        }
+    }
+}
+
+function hideTransactionSummary() {
+    const transactionSummary = document.getElementById('transaction_summary');
+    transactionSummary.style.display = 'none';
+}
+
+function calculateTransactionFee(amount) {
+    const receiverPreview = document.getElementById('receiver_preview');
+    const receiverStatus = document.getElementById('receiver_status');
+    
+    // Free for EasyCash to EasyCash transfers
+    if (receiverPreview.style.display === 'block' && 
+        receiverStatus && receiverStatus.classList.contains('success')) {
+        return 0;
+    }
+    
+    // Small fee for external transfers
+    if (amount > 0) {
+        return Math.min(amount * 0.01, 10); // 1% fee, max ₹10
+    }
+    return 0;
+}
+
+function validateForm() {
+    const currentMethod = document.getElementById('payment_method').value;
+    const amount = parseFloat(document.getElementById('amount').value);
+    const pin = document.getElementById('pin').value;
+    const currentUserPhone = '{{ user.phone }}';
+    const currentUserUPI = '{{ user.upi_id if user and user.upi_id else "" }}';
+    
+    // Validate amount
+    if (!amount || amount <= 0) {
+        showToast('Please enter a valid amount', 'error');
+        document.getElementById('amount').focus();
+        return false;
+    }
+    
+    if (amount > 50000) {
+        showToast('Maximum amount is ₹50,000', 'error');
+        document.getElementById('amount').focus();
+        return false;
+    }
+    
+    // Validate based on payment method
+    if (currentMethod === 'qr') {
+        // For QR method, check if we have QR data
+        const qrData = getStoredQrData();
+        if (!qrData || (!qrData.upi_id && !qrData.phone)) {
+            showToast('Please scan a QR code first or select another payment method', 'error');
+            return false;
+        }
+        
+        // Check for self-transfer
+        if ((qrData.phone && qrData.phone === currentUserPhone) || 
+            (qrData.upi_id && qrData.upi_id.toLowerCase() === currentUserUPI.toLowerCase())) {
+            showToast('You cannot send money to yourself', 'error');
+            return false;
+        }
+    } else if (currentMethod === 'contact') {
+        // For contact method, check if a contact is selected
+        const selectedContact = document.querySelector('.contact-card.selected');
+        if (!selectedContact) {
+            showToast('Please select a contact', 'error');
+            return false;
+        }
+        
+        const contactPhone = selectedContact.dataset.phone;
+        if (contactPhone === currentUserPhone) {
+            showToast('You cannot send money to yourself', 'error');
+            return false;
+        }
+    } else {
+        // For other methods, validate identifier
+        const identifier = document.getElementById('identifier').value.trim();
+        const config = getMethodConfig(currentMethod);
+        
+        if (!identifier) {
+            showToast('Please enter recipient details', 'error');
+            document.getElementById('identifier').focus();
+            return false;
+        }
+        
+        // Validate identifier format
+        if (config && config.validation && !config.validation(identifier)) {
+            const methodName = currentMethod === 'phone' ? 'phone number' : currentMethod;
+            showToast(`Invalid ${methodName} format`, 'error');
+            document.getElementById('identifier').focus();
+            return false;
+        }
+        
+        // Check for self-transfer
+        if ((currentMethod === 'phone' && identifier === currentUserPhone) || 
+            (currentMethod === 'upi' && identifier.toLowerCase() === currentUserUPI.toLowerCase())) {
+            showToast('You cannot send money to yourself', 'error');
+            document.getElementById('identifier').focus();
+            return false;
+        }
+        
+        // Check if receiver preview is shown (means identifier was validated)
+        const receiverPreview = document.getElementById('receiver_preview');
+        if (receiverPreview.style.display !== 'block') {
+            showToast('Please validate recipient details first', 'error');
+            return false;
+        }
+    }
+    
+    // Validate PIN
+    if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+        showToast('Please enter valid 6-digit PIN', 'error');
+        document.getElementById('pin').focus();
+        return false;
+    }
+    
+    // Calculate total amount
+    const fee = calculateTransactionFee(amount);
+    const total = amount + fee;
+    const currentBalance = parseFloat('{{ user.balance }}');
+    
+    if (total > currentBalance) {
+        showToast('Insufficient balance', 'error');
+        return false;
+    }
+    
+    return true;
+}
+
+function showConfirmation() {
+    const currentMethod = document.getElementById('payment_method').value;
+    const amount = parseFloat(document.getElementById('amount').value);
+    const pin = document.getElementById('pin').value;
+    const description = document.getElementById('description').value.trim();
+    
+    if (!validateForm()) {
+        return;
+    }
+    
+    // Format confirmation message
+    let confirmationMessage = `Send ₹${amount.toFixed(2)}`;
+    
+    if (description) {
+        confirmationMessage += `\nFor: ${description}`;
+    }
+    
+    if (currentMethod === 'qr') {
+        const qrData = getStoredQrData();
+        if (qrData) {
+            confirmationMessage += `\nTo: ${qrData.name || qrData.phone || qrData.upi_id}`;
+            if (qrData.phone) {
+                confirmationMessage += `\n(${qrData.phone})`;
+            }
+            if (qrData.upi_id) {
+                confirmationMessage += `\n(${qrData.upi_id})`;
+            }
+            confirmationMessage += `\n\nVia: QR Code Scan`;
+        }
+    } else if (currentMethod === 'contact') {
+        const selectedContact = document.querySelector('.contact-card.selected');
+        if (selectedContact) {
+            const name = selectedContact.dataset.name;
+            const phone = selectedContact.dataset.phone;
+            confirmationMessage += `\nTo: ${name}`;
+            confirmationMessage += `\n(${phone})`;
+            confirmationMessage += `\n\nVia: Contact`;
+        }
+    } else {
+        const receiverPreview = document.getElementById('receiver_preview');
+        const receiverName = document.getElementById('receiver_name');
+        const receiverIdentifier = document.getElementById('receiver_identifier');
+        const receiverPhone = document.getElementById('receiver_phone');
+        
+        if (receiverPreview.style.display === 'block') {
+            const name = receiverName.textContent;
+            const id = receiverIdentifier.textContent;
+            const phone = receiverPhone.style.display !== 'none' ? receiverPhone.textContent.replace('📱 ', '') : '';
+            
+            confirmationMessage += `\nTo: ${name}`;
+            if (phone) {
+                confirmationMessage += `\n(${phone})`;
+            } else {
+                confirmationMessage += `\n(${id})`;
+            }
+        }
+    }
+    
+    const fee = calculateTransactionFee(amount);
+    const total = amount + fee;
+    const currentBalance = parseFloat('{{ user.balance }}');
+    const balanceAfter = currentBalance - total;
+    
+    if (fee > 0) {
+        confirmationMessage += `\n\nTransaction Fee: ₹${fee.toFixed(2)}\nTotal: ₹${total.toFixed(2)}`;
+    }
+    
+    confirmationMessage += `\n\nBalance after transaction: ₹${balanceAfter.toFixed(2)}`;
+    
+    // Show confirmation dialog
+    if (confirm(confirmationMessage)) {
+        const sendButton = document.getElementById('send_button');
+        const form = document.getElementById('sendMoneyForm');
+        
+        // Disable button and show loading
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<div class="loading-spinner" style="display: inline-block; margin-right: 8px;"></div> Processing...';
+        
+        // For QR method, we need to add hidden fields
+        if (currentMethod === 'qr') {
+            const qrData = getStoredQrData();
+            if (qrData) {
+                // Create hidden input for UPI ID or phone
+                if (qrData.upi_id) {
+                    let hiddenInput = document.querySelector('input[name="qr_upi_id"]');
+                    if (!hiddenInput) {
+                        hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = 'qr_upi_id';
+                        form.appendChild(hiddenInput);
+                    }
+                    hiddenInput.value = qrData.upi_id;
+                    
+                    // Update the payment method to UPI
+                    document.getElementById('payment_method').value = 'upi';
+                    
+                    // Update identifier field for form submission
+                    document.getElementById('identifier').value = qrData.upi_id;
+                } else if (qrData.phone) {
+                    let hiddenInput = document.querySelector('input[name="qr_phone"]');
+                    if (!hiddenInput) {
+                        hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = 'qr_phone';
+                        form.appendChild(hiddenInput);
+                    }
+                    hiddenInput.value = qrData.phone;
+                    
+                    // Update the payment method to phone
+                    document.getElementById('payment_method').value = 'phone';
+                    
+                    // Update identifier field for form submission
+                    document.getElementById('identifier').value = qrData.phone;
+                }
+            }
+        }
+        
+        // Submit form
+        form.submit();
+    }
+}
+
+// QR Code Functions
+function getStoredQrData() {
+    const qrData = localStorage.getItem('last_qr_scan');
+    return qrData ? JSON.parse(qrData) : null;
+}
+
+function storeQrData(qrData) {
+    localStorage.setItem('last_qr_scan', JSON.stringify(qrData));
+    
+    // Also add to recent scans
+    addToRecentQrScans(qrData);
+}
+
+function populateFromQrData(qrData) {
+    if (!qrData || (!qrData.upi_id && !qrData.phone)) return;
+    
+    // Populate amount if present in QR
+    if (qrData.amount) {
+        document.getElementById('amount').value = qrData.amount;
+        updateTransactionSummary();
+    }
+    
+    // Show QR scan info
+    const qrScanInfo = document.getElementById('qr_scan_info');
+    const qrSource = document.getElementById('qr_source');
+    const qrVerification = document.getElementById('qr_verification');
+    
+    qrSource.textContent = qrData.source || 'QR Code';
+    qrVerification.textContent = qrData.verified ? 'Verified' : 'Pending';
+    qrVerification.className = qrData.verified ? 'qr-value success' : 'qr-value warning';
+    
+    qrScanInfo.style.display = 'block';
+    
+    // Also show receiver preview
+    showReceiverPreview({
+        exists: qrData.verified || false,
+        name: qrData.name || qrData.phone || (qrData.upi_id ? qrData.upi_id.split('@')[0] : 'Unknown'),
+        phone: qrData.phone || '',
+        identifier: qrData.upi_id || qrData.phone,
+        message: qrData.verified ? 'QR Verified • Ready to pay' : 'QR Detected • Verify before paying'
+    });
+}
+
+function loadRecentQrScans() {
+    const recentScans = JSON.parse(localStorage.getItem('recent_qr_scans') || '[]');
+    const qrList = document.getElementById('qr-list');
+    const recentQrCodes = document.getElementById('recent-qr-codes');
+    
+    if (recentScans.length === 0) {
+        recentQrCodes.style.display = 'none';
+        return;
+    }
+    
+    recentQrCodes.style.display = 'block';
+    qrList.innerHTML = '';
+    
+    // Show only last 5 scans
+    recentScans.slice(0, 5).forEach(scan => {
+        const qrItem = document.createElement('div');
+        qrItem.className = 'qr-item';
+        qrItem.innerHTML = `
+            <div class="qr-item-avatar">
+                ${(scan.name || scan.phone || scan.upi_id.split('@')[0] || 'U')[0].toUpperCase()}
+            </div>
+            <div class="qr-item-details">
+                <div class="qr-item-name">${scan.name || scan.phone || scan.upi_id.split('@')[0] || 'Unknown'}</div>
+                <div class="qr-item-identifier">${scan.phone || scan.upi_id}</div>
+                <div class="qr-item-date">${new Date(scan.timestamp).toLocaleDateString()}</div>
+            </div>
+            <button class="qr-item-action" onclick="useQrScan(this)" data-phone="${scan.phone || ''}" data-upi-id="${scan.upi_id || ''}" data-name="${scan.name || ''}">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        `;
+        qrList.appendChild(qrItem);
+    });
+}
+
+function addToRecentQrScans(qrData) {
+    if (!qrData || (!qrData.upi_id && !qrData.phone)) return;
+    
+    const recentScans = JSON.parse(localStorage.getItem('recent_qr_scans') || '[]');
+    
+    // Remove if already exists
+    const existingIndex = recentScans.findIndex(scan => 
+        (scan.phone && scan.phone === qrData.phone) || 
+        (scan.upi_id && scan.upi_id === qrData.upi_id)
+    );
+    if (existingIndex > -1) {
+        recentScans.splice(existingIndex, 1);
+    }
+    
+    // Add timestamp
+    qrData.timestamp = new Date().toISOString();
+    
+    // Add to beginning of array
+    recentScans.unshift(qrData);
+    
+    // Keep only last 10 scans
+    if (recentScans.length > 10) {
+        recentScans.pop();
+    }
+    
+    localStorage.setItem('recent_qr_scans', JSON.stringify(recentScans));
+    
+    // Update UI
+    loadRecentQrScans();
+}
+
+function useQrScan(button) {
+    const phone = button.getAttribute('data-phone');
+    const upiId = button.getAttribute('data-upi-id');
+    const name = button.getAttribute('data-name');
+    
+    if (phone) {
+        // Switch to phone method
+        document.getElementById('method-phone').click();
+        
+        // Populate identifier
+        document.getElementById('identifier').value = phone;
+        document.getElementById('identifier').classList.add('success');
+        
+        // Trigger validation
+        const inputEvent = new Event('input', { bubbles: true });
+        document.getElementById('identifier').dispatchEvent(inputEvent);
+    } else if (upiId) {
+        // Switch to UPI method
+        document.getElementById('method-upi').click();
+        
+        // Populate identifier
+        document.getElementById('identifier').value = upiId;
+        document.getElementById('identifier').classList.add('success');
+        
+        // Trigger validation
+        const inputEvent = new Event('input', { bubbles: true });
+        document.getElementById('identifier').dispatchEvent(inputEvent);
+    }
+    
+    showToast('QR scan details loaded', 'success');
+}
+
+// Helper Functions
+function clearQuickAmounts() {
+    document.querySelectorAll('.quick-amount').forEach(btn => btn.classList.remove('active'));
+}
+
+function clearSelectedContact() {
+    document.querySelectorAll('.contact-card').forEach(card => card.classList.remove('selected'));
+}
+
+function copyOwnUPI() {
+    const upiId = '{{ user.upi_id if user and user.upi_id else "" }}';
+    if (!upiId) {
+        showToast('No UPI ID set', 'warning');
+        return;
+    }
+    
+    copyToClipboard(upiId, 'Your UPI ID copied to clipboard!');
+}
+
+function copyToClipboard(text, successMessage) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+            .then(() => {
+                showToast(successMessage, 'success');
+            })
+            .catch(err => {
+                fallbackCopy(text, successMessage);
+            });
+    } else {
+        fallbackCopy(text, successMessage);
+    }
+}
+
+function fallbackCopy(text, successMessage) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showToast(successMessage, 'success');
+        } else {
+            showToast('Failed to copy', 'error');
+        }
+    } catch (err) {
+        console.error('Failed to copy:', err);
+        showToast('Failed to copy', 'error');
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+// Toast notification
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    
+    // Remove existing toasts
+    const existingToasts = container.querySelectorAll('.toast');
+    existingToasts.forEach(toast => {
+        if (!toast.classList.contains('showing')) {
+            toast.remove();
+        }
+    });
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 
+                          type === 'error' ? 'exclamation-circle' : 
+                          type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Setup toast container
+function setupToastContainer() {
+    let container = document.getElementById('toastContainer');
+    
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+}
+
+// Close suggestions when clicking outside
+document.addEventListener('click', function(e) {
+    const identifierInput = document.getElementById('identifier');
+    const suggestions = document.getElementById('suggestions');
+    
+    if (identifierInput && suggestions && 
+        !identifierInput.contains(e.target) && !suggestions.contains(e.target)) {
+        clearSuggestions();
+    }
+});
+
+// Handle session timeout
+let activityTimer;
+function resetActivityTimer() {
+    clearTimeout(activityTimer);
+    activityTimer = setTimeout(() => {
+        showToast('Session will expire soon. Please complete your transaction.', 'warning');
+    }, 5 * 60 * 1000); // 5 minutes
+}
+
+// Reset timer on user activity
+document.addEventListener('click', resetActivityTimer);
+document.addEventListener('keypress', resetActivityTimer);
+resetActivityTimer();
+
+// Handle page visibility change
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        // Page is hidden, pause timers if needed
+    } else {
+        // Page is visible again
+        resetActivityTimer();
+    }
+});
+</script>
+{% endblock %}

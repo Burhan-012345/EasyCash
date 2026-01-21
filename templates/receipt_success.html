@@ -1,0 +1,1086 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="receipt-container">
+    <!-- Receipt Header -->
+    <div class="receipt-header">
+        <div class="receipt-brand">
+            <div class="brand-logo">
+                <i class="fas fa-wallet"></i>
+                <span>EasyCash</span>
+            </div>
+            <div class="brand-tagline">Digital Wallet Receipt</div>
+        </div>
+        
+        <div class="receipt-meta">
+            <div class="meta-item">
+                <span class="meta-label">Receipt No:</span>
+                <span class="meta-value">RC{{ transaction.transaction_id[:8]|upper if transaction else '00000000' }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Generated:</span>
+                <span class="meta-value">{{ current_time.strftime('%d/%m/%Y %I:%M %p') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Status -->
+    <div class="receipt-status {{ 'success' if transaction.type == 'deposit' else 'processing' }}">
+        <div class="status-icon">
+            {% if transaction.type == 'deposit' %}
+                <i class="fas fa-check-circle"></i>
+            {% else %}
+                <i class="fas fa-clock"></i>
+            {% endif %}
+        </div>
+        <div class="status-content">
+            <h2>{{ 'Payment Received' if transaction.type == 'deposit' else 'Withdrawal Initiated' }}</h2>
+            <p class="status-amount">
+                {% if transaction.type == 'deposit' %}
+                    +₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}
+                {% else %}
+                    -₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}
+                {% endif %}
+            </p>
+            <p class="status-message">
+                {{ 'Successfully deposited to your wallet' if transaction.type == 'deposit' else 'Processing - Funds will arrive in 1-2 days' }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Receipt Details -->
+    <div class="receipt-details">
+        <div class="details-section">
+            <h3><i class="fas fa-info-circle"></i> Transaction Details</h3>
+            <div class="details-grid">
+                <div class="detail-row">
+                    <span class="detail-label">Transaction ID</span>
+                    <span class="detail-value">{{ transaction.transaction_id if transaction else 'N/A' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Type</span>
+                    <span class="detail-value">{{ transaction.type|title if transaction else 'N/A' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Date & Time</span>
+                    <span class="detail-value">{{ transaction.date_time if transaction else current_time.strftime('%d/%m/%Y %I:%M %p') }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Status</span>
+                    <span class="detail-value status-badge {{ 'completed' if transaction.type == 'deposit' else 'processing' }}">
+                        {{ 'Completed' if transaction.type == 'deposit' else 'Processing' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="details-section">
+            <h3><i class="fas fa-mobile-alt"></i> Account Information</h3>
+            <div class="account-details">
+                <div class="account-row">
+                    <span class="account-label">Account Holder</span>
+                    <span class="account-value">{{ user.name if user.name else 'User' }}</span>
+                </div>
+                <div class="account-row">
+                    <span class="account-label">Phone Number</span>
+                    <span class="account-value">{{ user.phone }}</span>
+                </div>
+                <div class="account-row">
+                    <span class="account-label">Account ID</span>
+                    <span class="account-value">ACC{{ user.phone[-6:] }}</span>
+                </div>
+                <div class="account-row">
+                    <span class="account-label">Member Since</span>
+                    <span class="account-value">{{ user.created_at[:10] if user else current_time.strftime('%d/%m/%Y') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="details-section">
+            <h3><i class="fas fa-money-bill-wave"></i> Amount Details</h3>
+            <div class="amount-details">
+                <div class="amount-row">
+                    <span class="amount-label">Principal Amount</span>
+                    <span class="amount-value">₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}</span>
+                </div>
+                {% if transaction.type == 'withdraw' %}
+                <div class="amount-row">
+                    <span class="amount-label">Processing Fee</span>
+                    <span class="amount-value">-₹5.00</span>
+                </div>
+                <div class="amount-row total">
+                    <span class="amount-label">Net Amount</span>
+                    <span class="amount-value">₹{{ "%.2f"|format(transaction.amount - 5) if transaction else '0.00' }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if transaction.type == 'withdraw' %}
+        <div class="details-section">
+            <h3><i class="fas fa-university"></i> Bank Details</h3>
+            <div class="bank-details">
+                <div class="bank-row">
+                    <span class="bank-label">Bank Name</span>
+                    <span class="bank-value">HDFC Bank</span>
+                </div>
+                <div class="bank-row">
+                    <span class="bank-label">Account Number</span>
+                    <span class="bank-value">•••• 1234</span>
+                </div>
+                <div class="bank-row">
+                    <span class="bank-label">IFSC Code</span>
+                    <span class="bank-value">HDFC0001234</span>
+                </div>
+                <div class="bank-row">
+                    <span class="bank-label">Estimated Arrival</span>
+                    <span class="bank-value">
+                        {% if arrival_date %}
+                            {{ arrival_date.strftime('%d %b %Y') }}
+                        {% else %}
+                            {{ (current_time.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=2)).strftime('%d %b %Y') }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="details-section">
+            <h3><i class="fas fa-chart-line"></i> Balance Summary</h3>
+            <div class="balance-summary">
+                <div class="balance-row">
+                    <span class="balance-label">Previous Balance</span>
+                    <span class="balance-value">
+                        {% if transaction %}
+                            {% if transaction.type == 'deposit' %}
+                                ₹{{ "%.2f"|format(transaction.balance_after - transaction.amount) }}
+                            {% else %}
+                                ₹{{ "%.2f"|format(transaction.balance_after + transaction.amount) }}
+                            {% endif %}
+                        {% else %}
+                            ₹0.00
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="balance-row {{ 'positive' if transaction.type == 'deposit' else 'negative' }}">
+                    <span class="balance-label">{{ 'Amount Added' if transaction.type == 'deposit' else 'Amount Deducted' }}</span>
+                    <span class="balance-value">
+                        {% if transaction.type == 'deposit' %}
+                            +₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}
+                        {% else %}
+                            -₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="balance-row total">
+                    <span class="balance-label">Current Balance</span>
+                    <span class="balance-value">₹{{ "%.2f"|format(transaction.balance_after) if transaction else '0.00' }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Phone Verification QR -->
+        <div class="details-section">
+            <h3><i class="fas fa-qrcode"></i> Phone Verification</h3>
+            <div class="qr-verification">
+                <div class="qr-container" id="qrCode"></div>
+                <div class="qr-info">
+                    <p><i class="fas fa-mobile-alt"></i> Scan to verify this transaction</p>
+                    <p class="qr-data">Phone: {{ user.phone }}</p>
+                    <p class="qr-data">Amount: ₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}</p>
+                    <p class="qr-data">Type: {{ transaction.type|title if transaction else 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Footer -->
+    <div class="receipt-footer">
+        <div class="footer-security">
+            <div class="security-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <div class="security-text">
+                <h4>Secure Transaction</h4>
+                <p>This transaction is secured with 256-bit SSL encryption</p>
+                <p class="phone-verified"><i class="fas fa-check-circle"></i> Phone Verified: {{ user.phone }}</p>
+            </div>
+        </div>
+        
+        <div class="footer-notes">
+            <h4><i class="fas fa-info-circle"></i> Important Notes</h4>
+            <ul class="notes-list">
+                <li>This is an electronic receipt. No signature required.</li>
+                <li>Please keep this receipt for your records.</li>
+                <li>For any discrepancies, contact support within 7 days.</li>
+                <li>Transaction ID: {{ transaction.transaction_id if transaction else 'N/A' }}</li>
+                <li>Phone Number: {{ user.phone }}</li>
+            </ul>
+        </div>
+        
+        <div class="footer-support">
+            <div class="support-contact">
+                <h4><i class="fas fa-headset"></i> Support</h4>
+                <p>Email: support@easycash.com</p>
+                <p>Phone: +91 1800 123 456</p>
+                <p>Hours: 24/7</p>
+            </div>
+        </div>
+        
+        <div class="footer-actions">
+            <button onclick="window.print()" class="btn-print">
+                <i class="fas fa-print"></i>
+                Print Receipt
+            </button>
+            <button onclick="downloadAsPDF()" class="btn-download">
+                <i class="fas fa-download"></i>
+                Save as PDF
+            </button>
+            <button onclick="shareReceipt()" class="btn-share">
+                <i class="fas fa-share-alt"></i>
+                Share
+            </button>
+            <a href="{{ url_for('dashboard') }}" class="btn-back">
+                <i class="fas fa-arrow-left"></i>
+                Back to Dashboard
+            </a>
+        </div>
+        
+        <div class="footer-disclaimer">
+            <p>
+                <i class="fas fa-copyright"></i>
+                {{ current_time.strftime('%Y') }} EasyCash Digital Wallet. All rights reserved.
+                This receipt is generated electronically. No physical copy will be mailed.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto print if requested
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('print') === 'true') {
+        setTimeout(() => {
+            window.print();
+        }, 1000);
+    }
+    
+    // Generate QR code with phone information
+    generateQRCode();
+    
+    // Add receipt styling
+    document.body.classList.add('receipt-page');
+});
+
+function generateQRCode() {
+    const qrData = {
+        transactionId: '{{ transaction.transaction_id if transaction else "" }}',
+        amount: {{ transaction.amount if transaction else 0 }},
+        type: '{{ transaction.type if transaction else "" }}',
+        date: '{{ current_time.strftime("%Y-%m-%d %H:%M:%S") }}',
+        phone: '{{ user.phone }}',
+        name: '{{ user.name if user.name else "" }}'
+    };
+    
+    const qrText = JSON.stringify(qrData);
+    const qrCodeDiv = document.getElementById('qrCode');
+    
+    // In production, use a QR code library
+    // For demo, create a simple QR code display
+    qrCodeDiv.innerHTML = `
+        <div class="qr-placeholder">
+            <div class="qr-grid">
+                <!-- QR code pattern - simplified for demo -->
+                <div class="qr-row">
+                    <div class="qr-cell black"></div><div class="qr-cell"></div><div class="qr-cell black"></div><div class="qr-cell"></div><div class="qr-cell black"></div>
+                </div>
+                <div class="qr-row">
+                    <div class="qr-cell"></div><div class="qr-cell black"></div><div class="qr-cell"></div><div class="qr-cell black"></div><div class="qr-cell"></div>
+                </div>
+                <div class="qr-row">
+                    <div class="qr-cell black"></div><div class="qr-cell"></div><div class="qr-cell black"></div><div class="qr-cell"></div><div class="qr-cell black"></div>
+                </div>
+                <div class="qr-row">
+                    <div class="qr-cell"></div><div class="qr-cell black"></div><div class="qr-cell"></div><div class="qr-cell black"></div><div class="qr-cell"></div>
+                </div>
+                <div class="qr-row">
+                    <div class="qr-cell black"></div><div class="qr-cell"></div><div class="qr-cell black"></div><div class="qr-cell"></div><div class="qr-cell black"></div>
+                </div>
+            </div>
+            <p class="qr-text">Scan to verify transaction</p>
+            <p class="qr-phone">{{ user.phone }}</p>
+        </div>
+    `;
+}
+
+function downloadAsPDF() {
+    showToast('Generating PDF...', 'info');
+    
+    // Show loading state
+    const buttons = document.querySelectorAll('.btn-download, .btn-print, .btn-share');
+    buttons.forEach(btn => {
+        if (btn.disabled !== undefined) {
+            btn.disabled = true;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            // Re-enable after 3 seconds
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }, 3000);
+        }
+    });
+    
+    // Redirect to PDF endpoint with phone parameter
+    const transactionId = '{{ transaction.transaction_id if transaction else "" }}';
+    const phone = '{{ user.phone }}';
+    if (transactionId) {
+        window.location.href = `/download-transaction/${transactionId}?phone=${encodeURIComponent(phone)}`;
+    } else {
+        showToast('No transaction found', 'error');
+    }
+}
+
+function shareReceipt() {
+    const transactionId = '{{ transaction.transaction_id if transaction else "" }}';
+    const amount = '{{ "%.2f"|format(transaction.amount) if transaction else "0.00" }}';
+    const type = '{{ transaction.type if transaction else "" }}'.toUpperCase();
+    const phone = '{{ user.phone }}';
+    const formattedPhone = phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+    
+    const shareData = {
+        title: 'EasyCash Transaction Receipt',
+        text: `EasyCash ${type} Receipt\nAmount: ₹${amount}\nPhone: ${formattedPhone}\nTransaction ID: ${transactionId}`,
+        url: window.location.href,
+    };
+    
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        navigator.share(shareData)
+            .then(() => showToast('Receipt shared successfully', 'success'))
+            .catch(error => {
+                if (error.name !== 'AbortError') {
+                    console.error('Share failed:', error);
+                    copyToClipboard(shareData.text);
+                    showToast('Receipt details copied to clipboard', 'info');
+                }
+            });
+    } else {
+        copyToClipboard(shareData.text);
+        showToast('Receipt details copied to clipboard', 'info');
+    }
+}
+
+function copyToClipboard(text) {
+    if (!text) {
+        const transactionId = '{{ transaction.transaction_id if transaction else "" }}';
+        const phone = '{{ user.phone }}';
+        text = `Transaction ID: ${transactionId}\nPhone: ${phone}\nURL: ${window.location.href}`;
+    }
+    
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Copied to clipboard', 'success');
+    }).catch(err => {
+        // Fallback
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showToast('Copied to clipboard', 'success');
+    });
+}
+
+function showToast(message, type = 'info') {
+    // Remove existing toasts
+    const existingToasts = document.querySelectorAll('.toast');
+    existingToasts.forEach(toast => toast.remove());
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    let icon = 'info-circle';
+    if (type === 'success') icon = 'check-circle';
+    if (type === 'error') icon = 'exclamation-circle';
+    if (type === 'warning') icon = 'exclamation-triangle';
+    
+    toast.innerHTML = `
+        <div class="toast-content">
+            <i class="fas fa-${icon}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    // Add to body
+    document.body.appendChild(toast);
+    
+    // Show with animation
+    setTimeout(() => toast.classList.add('show'), 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 300);
+    }, 3000);
+}
+</script>
+
+<style>
+/* Receipt-specific styles */
+.receipt-page {
+    background: white !important;
+    color: #333 !important;
+    min-height: 100vh;
+}
+
+.receipt-page .bottom-nav,
+.receipt-page .install-container {
+    display: none !important;
+}
+
+.receipt-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: white;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    border-radius: 12px;
+}
+
+.receipt-header {
+    text-align: center;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid #e0e0e0;
+    margin-bottom: 2rem;
+}
+
+.receipt-brand {
+    margin-bottom: 1.5rem;
+}
+
+.brand-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.brand-logo i {
+    font-size: 2.5rem;
+    color: #1a73e8;
+}
+
+.brand-logo span {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a73e8;
+}
+
+.brand-tagline {
+    color: #666;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.receipt-meta {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.meta-label {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.25rem;
+}
+
+.meta-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.receipt-status {
+    text-align: center;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+}
+
+.receipt-status.success {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    border: 1px solid #c3e6cb;
+}
+
+.receipt-status.processing {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border: 1px solid #ffeaa7;
+}
+
+.status-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.receipt-status.success .status-icon {
+    color: #28a745;
+}
+
+.receipt-status.processing .status-icon {
+    color: #ffc107;
+}
+
+.status-content h2 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.8rem;
+}
+
+.status-amount {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+}
+
+.receipt-status.success .status-amount {
+    color: #28a745;
+}
+
+.receipt-status.processing .status-amount {
+    color: #333;
+}
+
+.status-message {
+    color: #666;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.receipt-details {
+    margin-bottom: 2rem;
+}
+
+.details-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.details-section:last-child {
+    border-bottom: none;
+}
+
+.details-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 1.5rem 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.details-grid,
+.account-details,
+.bank-details,
+.balance-summary,
+.amount-details {
+    display: grid;
+    gap: 1rem;
+}
+
+.detail-row,
+.account-row,
+.bank-row,
+.balance-row,
+.amount-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.detail-label,
+.account-label,
+.bank-label,
+.balance-label,
+.amount-label {
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.detail-value,
+.account-value,
+.bank-value,
+.balance-value,
+.amount-value {
+    font-weight: 500;
+    color: #333;
+}
+
+.account-value {
+    font-family: monospace;
+    letter-spacing: 0.5px;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-badge.completed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.processing {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.amount-row.total,
+.balance-row.total {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    font-weight: 600;
+}
+
+.balance-row.positive .balance-value {
+    color: #28a745;
+}
+
+.balance-row.negative .balance-value {
+    color: #dc3545;
+}
+
+/* QR Verification */
+.qr-verification {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+}
+
+.qr-container {
+    flex-shrink: 0;
+}
+
+.qr-placeholder {
+    text-align: center;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.qr-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 0.5rem;
+}
+
+.qr-row {
+    display: flex;
+    gap: 2px;
+    justify-content: center;
+}
+
+.qr-cell {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #333;
+}
+
+.qr-cell.black {
+    background: #333;
+}
+
+.qr-text {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.qr-phone {
+    margin: 0;
+    font-family: monospace;
+    font-weight: 600;
+    color: #333;
+    font-size: 1rem;
+}
+
+.qr-info p {
+    margin: 0.5rem 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.qr-info p i {
+    color: #1a73e8;
+    margin-right: 0.5rem;
+}
+
+.qr-data {
+    font-family: monospace;
+    background: #e9ecef;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.receipt-footer {
+    padding-top: 2rem;
+    border-top: 2px solid #e0e0e0;
+}
+
+.footer-security {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.security-icon {
+    font-size: 2rem;
+    color: #28a745;
+}
+
+.security-text h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.security-text p {
+    margin: 0 0 0.5rem 0;
+    color: #666;
+}
+
+.phone-verified {
+    color: #28a745 !important;
+    font-weight: 500;
+}
+
+.phone-verified i {
+    margin-right: 0.5rem;
+}
+
+.footer-notes {
+    margin-bottom: 2rem;
+}
+
+.footer-notes h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+.notes-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.notes-list li {
+    padding: 0.5rem 0;
+    color: #666;
+    border-bottom: 1px dashed #e0e0e0;
+}
+
+.notes-list li:last-child {
+    border-bottom: none;
+    font-weight: 500;
+    color: #333;
+}
+
+.footer-support {
+    margin-bottom: 2rem;
+}
+
+.support-contact h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+.support-contact p {
+    margin: 0.25rem 0;
+    color: #666;
+}
+
+.footer-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.btn-print,
+.btn-download,
+.btn-share,
+.btn-back {
+    flex: 1;
+    min-width: 150px;
+    padding: 1rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.btn-print {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-download {
+    background: #28a745;
+    color: white;
+}
+
+.btn-share {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-back {
+    background: #f8f9fa;
+    color: #495057;
+    border: 1px solid #dee2e6;
+}
+
+.btn-print:hover,
+.btn-download:hover,
+.btn-share:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.btn-back:hover {
+    background: #e9ecef;
+    border-color: #ced4da;
+    transform: translateY(-2px);
+}
+
+.footer-disclaimer {
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.footer-disclaimer p {
+    margin: 0.5rem 0;
+}
+
+/* Toast styles */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    z-index: 10000;
+    transform: translateX(150%);
+    transition: transform 0.3s ease;
+    max-width: 350px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.toast.show {
+    transform: translateX(0);
+}
+
+.toast-success {
+    background: #34a853;
+    border-left: 4px solid #2e7d32;
+}
+
+.toast-error {
+    background: #ea4335;
+    border-left: 4px solid #d32f2f;
+}
+
+.toast-info {
+    background: #1a73e8;
+    border-left: 4px solid #0d47a1;
+}
+
+.toast-warning {
+    background: #fbbc04;
+    border-left: 4px solid #f57c00;
+    color: #333;
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.toast-content i {
+    font-size: 1.2rem;
+}
+
+/* Print styles */
+@media print {
+    .receipt-container {
+        box-shadow: none !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+    
+    .receipt-page {
+        background: white !important;
+    }
+    
+    .footer-actions,
+    .btn-print,
+    .btn-download,
+    .btn-share,
+    .btn-back {
+        display: none !important;
+    }
+    
+    .receipt-status {
+        break-inside: avoid;
+    }
+    
+    .details-section {
+        break-inside: avoid;
+    }
+    
+    body * {
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .receipt-container {
+        padding: 1rem;
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    
+    .receipt-meta {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .status-amount {
+        font-size: 2rem;
+    }
+    
+    .qr-verification {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .footer-actions {
+        flex-direction: column;
+    }
+    
+    .btn-print,
+    .btn-download,
+    .btn-share,
+    .btn-back {
+        width: 100%;
+    }
+    
+    .toast {
+        left: 20px;
+        right: 20px;
+        max-width: none;
+        transform: translateY(-100%);
+    }
+    
+    .toast.show {
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 480px) {
+    .brand-logo {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .brand-logo span {
+        font-size: 1.5rem;
+    }
+    
+    .status-amount {
+        font-size: 1.8rem;
+    }
+    
+    .detail-row,
+    .account-row,
+    .bank-row,
+    .balance-row,
+    .amount-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .detail-value,
+    .account-value,
+    .bank-value,
+    .balance-value,
+    .amount-value {
+        align-self: flex-end;
+    }
+    
+    .receipt-status {
+        padding: 1.5rem 1rem;
+    }
+    
+    .status-content h2 {
+        font-size: 1.4rem;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,60 @@
+<div class="card contact-card">
+    <div class="card-body">
+        <div class="d-flex align-items-center">
+            <div class="contact-avatar me-3">
+                {{ (contact.nickname if contact.nickname else contact.username)[0]|upper if contact.username else 'U' }}
+            </div>
+            <div class="flex-grow-1">
+                <h6 class="mb-1">
+                    {% if contact.nickname %}
+                        {{ contact.nickname }}
+                        <small class="text-muted">({{ contact.username }})</small>
+                    {% else %}
+                        {{ contact.username }}
+                    {% endif %}
+                </h6>
+                <p class="text-muted mb-1 small">
+                    <i class="fas fa-phone me-1"></i>{{ contact.phone }}
+                </p>
+                {% if contact.upi_id %}
+                <p class="text-muted mb-0 small">
+                    <i class="fas fa-qrcode me-1"></i>{{ contact.upi_id }}
+                </p>
+                {% endif %}
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="sendToContact('{{ contact.phone }}', '{{ contact.username }}')">
+                            <i class="fas fa-paper-plane me-2"></i> Send Money
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="viewHistory('{{ contact.phone }}')">
+                            <i class="fas fa-history me-2"></i> View History
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="openEditModal('{{ contact.phone }}', '{{ contact.username }}', '{{ contact.nickname if contact.nickname else '' }}')">
+                            <i class="fas fa-edit me-2"></i> Edit Contact
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-sm btn-primary flex-grow-1" 
+                    onclick="sendToContact('{{ contact.phone }}', '{{ contact.username }}')">
+                <i class="fas fa-paper-plane me-1"></i> Send
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" 
+                    onclick="viewHistory('{{ contact.phone }}')">
+                <i class="fas fa-history me-1"></i> History
+            </button>
+        </div>
+    </div>
+</div>

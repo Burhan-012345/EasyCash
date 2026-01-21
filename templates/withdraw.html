@@ -1,0 +1,759 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="transaction-container">
+    <div class="transaction-header">
+        <a href="{{ url_for('dashboard') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2>Withdraw Money</h2>
+        <div class="current-balance">
+            <i class="fas fa-wallet"></i>
+            ₹{{ "%.2f"|format(user.balance) }}
+        </div>
+    </div>
+    
+    <div class="phone-display">
+        <div class="phone-icon">
+            <i class="fas fa-mobile-alt"></i>
+        </div>
+        <div class="phone-details">
+            <div class="phone-label">Account Phone</div>
+            <div class="phone-number">{{ user.phone }}</div>
+        </div>
+    </div>
+    
+    <div class="transaction-card">
+        {% if error %}
+        <div class="error-message">
+            <i class="fas fa-exclamation-circle"></i>
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <div class="balance-warning" id="balanceWarning" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Amount exceeds available balance</span>
+        </div>
+        
+        <form method="POST" class="transaction-form" id="withdrawForm">
+            <div class="amount-input-container">
+                <label for="amount">Enter Amount (₹)</label>
+                <div class="amount-input">
+                    <span class="currency-symbol">₹</span>
+                    <input type="number" 
+                           id="amount" 
+                           name="amount" 
+                           placeholder="0.00" 
+                           step="0.01"
+                           min="0.01"
+                           max="{{ user.balance }}"
+                           required
+                           autofocus
+                           inputmode="decimal">
+                </div>
+                <div class="available-balance">
+                    <i class="fas fa-wallet"></i>
+                    Available: ₹{{ "%.2f"|format(user.balance) }}
+                </div>
+            </div>
+            
+            <div class="quick-amounts">
+                <button type="button" class="quick-amount" data-amount="500">
+                    <span class="amount">₹500</span>
+                    <span class="hint">Quick Withdraw</span>
+                </button>
+                <button type="button" class="quick-amount" data-amount="1000">
+                    <span class="amount">₹1,000</span>
+                    <span class="hint">Quick Withdraw</span>
+                </button>
+                <button type="button" class="quick-amount" data-amount="2000">
+                    <span class="amount">₹2,000</span>
+                    <span class="hint">Quick Withdraw</span>
+                </button>
+                <button type="button" class="quick-amount" data-amount="{{ (user.balance/2)|int }}" id="halfBalance">
+                    <span class="amount">₹{{ (user.balance/2)|int }}</span>
+                    <span class="hint">50% of Balance</span>
+                </button>
+            </div>
+            
+            <div class="transaction-details">
+                <div class="detail-row">
+                    <span class="detail-label">Transaction Type</span>
+                    <span class="detail-value withdraw">Withdrawal</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Processing Fee</span>
+                    <span class="detail-value">₹5.00</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Account Phone</span>
+                    <span class="detail-value">{{ user.phone }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Balance After</span>
+                    <span class="detail-value" id="balanceAfter">₹{{ "%.2f"|format(user.balance) }}</span>
+                </div>
+            </div>
+            
+            <div class="pin-verification">
+                <h4><i class="fas fa-lock"></i> Enter PIN to Confirm</h4>
+                <input type="password" 
+                       name="pin" 
+                       placeholder="6-digit PIN" 
+                       maxlength="6"
+                       minlength="6"
+                       required
+                       inputmode="numeric">
+                <div class="pin-hint">Enter your 6-digit security PIN</div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn-primary btn-large" id="submitBtn">
+                    <i class="fas fa-check-circle"></i>
+                    <span class="btn-text">Confirm Withdrawal</span>
+                </button>
+                <a href="{{ url_for('dashboard') }}" class="btn-secondary">
+                    <i class="fas fa-times"></i>
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="transaction-info">
+        <div class="info-card">
+            <i class="fas fa-info-circle"></i>
+            <div class="info-content">
+                <h4>Withdrawal Information</h4>
+                <ul>
+                    <li>Withdrawals take 1-2 business days to process</li>
+                    <li>₹5 processing fee applies to all withdrawals</li>
+                    <li>Funds will be transferred to your linked bank account</li>
+                    <li>Linked to phone: {{ user.phone }}</li>
+                    <li>Receipt will be generated after withdrawal</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const amountInput = document.getElementById('amount');
+    const quickAmounts = document.querySelectorAll('.quick-amount');
+    const balanceAfter = document.getElementById('balanceAfter');
+    const balanceWarning = document.getElementById('balanceWarning');
+    const submitBtn = document.getElementById('submitBtn');
+    const form = document.getElementById('withdrawForm');
+    const userBalance = {{ user.balance }};
+    const processingFee = 5.00;
+    
+    // Format currency display
+    function formatCurrency(amount) {
+        return '₹' + parseFloat(amount).toFixed(2);
+    }
+    
+    // Update balance after amount changes
+    function updateBalanceAfter() {
+        const amount = parseFloat(amountInput.value) || 0;
+        const totalDeduction = amount + processingFee;
+        const newBalance = userBalance - totalDeduction;
+        
+        balanceAfter.textContent = formatCurrency(newBalance);
+        
+        if (totalDeduction > userBalance) {
+            balanceWarning.style.display = 'flex';
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.6';
+            submitBtn.style.cursor = 'not-allowed';
+            submitBtn.innerHTML = '<i class="fas fa-exclamation-circle"></i><span class="btn-text">Insufficient Balance</span>';
+        } else if (amount <= 0) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.6';
+            submitBtn.style.cursor = 'not-allowed';
+            submitBtn.innerHTML = '<i class="fas fa-check-circle"></i><span class="btn-text">Enter Amount</span>';
+        } else {
+            balanceWarning.style.display = 'none';
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+            submitBtn.innerHTML = '<i class="fas fa-check-circle"></i><span class="btn-text">Confirm Withdrawal</span>';
+        }
+    }
+    
+    // Quick amount buttons
+    quickAmounts.forEach(button => {
+        button.addEventListener('click', () => {
+            const amount = parseFloat(button.dataset.amount);
+            const totalDeduction = amount + processingFee;
+            
+            if (totalDeduction <= userBalance) {
+                amountInput.value = amount.toFixed(2);
+                updateBalanceAfter();
+                amountInput.focus();
+                
+                // Add visual feedback
+                button.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    button.style.transform = '';
+                }, 150);
+            } else {
+                showToast('Amount exceeds available balance', 'error');
+            }
+        });
+    });
+    
+    // Real-time validation
+    amountInput.addEventListener('input', function() {
+        // Limit to 2 decimal places
+        if (this.value.includes('.')) {
+            const [whole, decimal] = this.value.split('.');
+            if (decimal && decimal.length > 2) {
+                this.value = whole + '.' + decimal.slice(0, 2);
+            }
+        }
+        
+        updateBalanceAfter();
+    });
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        const amount = parseFloat(amountInput.value);
+        const pin = document.querySelector('input[name="pin"]').value;
+        const totalDeduction = amount + processingFee;
+        
+        if (isNaN(amount) || amount <= 0) {
+            e.preventDefault();
+            showToast('Please enter a valid amount', 'error');
+            amountInput.focus();
+            return;
+        }
+        
+        if (totalDeduction > userBalance) {
+            e.preventDefault();
+            showToast('Insufficient balance', 'error');
+            amountInput.focus();
+            return;
+        }
+        
+        if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+            e.preventDefault();
+            showToast('Please enter valid 6-digit PIN', 'error');
+            document.querySelector('input[name="pin"]').focus();
+            return;
+        }
+        
+        // Show confirmation with phone number
+        const phone = '{{ user.phone }}';
+        const formattedPhone = phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+        const netAmount = amount - processingFee;
+        
+        const confirmationMessage = `Withdraw ₹${amount.toFixed(2)}?\n\n` +
+                                  `Account: ${formattedPhone}\n` +
+                                  `Processing Fee: ₹${processingFee.toFixed(2)}\n` +
+                                  `Net Amount: ₹${netAmount.toFixed(2)}\n` +
+                                  `Balance After: ${formatCurrency(userBalance - totalDeduction)}`;
+        
+        if (!confirm(confirmationMessage)) {
+            e.preventDefault();
+        } else {
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span class="btn-text">Processing...</span>';
+        }
+    });
+    
+    // Focus amount input on page load
+    amountInput.focus();
+    
+    // Initialize
+    updateBalanceAfter();
+    
+    // Show toast function
+    function showToast(message, type = 'info') {
+        const existingToast = document.querySelector('.toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+        
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.classList.add('show'), 10);
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 300);
+        }, 3000);
+    }
+});
+</script>
+
+<style>
+.transaction-container {
+    padding: 20px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.transaction-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.transaction-header h2 {
+    margin: 0;
+    flex: 1;
+    text-align: center;
+}
+
+.current-balance {
+    background: linear-gradient(135deg, #1a237e, #283593);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-weight: 500;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.phone-display {
+    background: var(--dark-surface);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.phone-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+}
+
+.phone-details {
+    flex: 1;
+}
+
+.phone-label {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.phone-number {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--dark-text);
+    letter-spacing: 0.5px;
+}
+
+.transaction-card {
+    background: var(--dark-surface);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+}
+
+.amount-input-container {
+    margin-bottom: 24px;
+}
+
+.amount-input-container label {
+    display: block;
+    margin-bottom: 12px;
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.amount-input {
+    display: flex;
+    align-items: center;
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 0 20px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.amount-input:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.currency-symbol {
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--dark-text);
+    margin-right: 12px;
+}
+
+.amount-input input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--dark-text);
+    font-size: 32px;
+    font-weight: 600;
+    padding: 20px 0;
+    outline: none;
+    width: 100%;
+}
+
+.amount-input input::placeholder {
+    color: var(--dark-text-secondary);
+    opacity: 0.5;
+}
+
+.available-balance {
+    text-align: center;
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--dark-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(26, 115, 232, 0.1);
+    border-radius: 8px;
+}
+
+.quick-amounts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin: 24px 0;
+}
+
+@media (max-width: 380px) {
+    .quick-amounts {
+        grid-template-columns: 1fr;
+    }
+}
+
+.quick-amount {
+    background: var(--dark-surface-light);
+    border: 1px solid #444;
+    color: var(--dark-text);
+    padding: 16px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.quick-amount:hover {
+    background: #333;
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.quick-amount .amount {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.quick-amount .hint {
+    font-size: 11px;
+    color: var(--dark-text-secondary);
+    opacity: 0.8;
+}
+
+#halfBalance {
+    background: rgba(26, 115, 232, 0.15);
+    border-color: var(--primary-color);
+}
+
+.transaction-details {
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 24px 0;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #333;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.detail-value {
+    font-weight: 500;
+    font-size: 15px;
+}
+
+.detail-value.withdraw {
+    color: var(--danger-color);
+}
+
+.pin-verification {
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.pin-verification h4 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px 0;
+    color: var(--dark-text);
+    font-size: 16px;
+}
+
+.pin-verification input {
+    width: 100%;
+    padding: 16px;
+    background: var(--dark-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--dark-text);
+    font-size: 20px;
+    letter-spacing: 8px;
+    text-align: center;
+    font-family: monospace;
+    transition: all 0.3s ease;
+}
+
+.pin-verification input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.pin-hint {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+}
+
+.form-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.btn-large {
+    padding: 18px 24px;
+    font-size: 17px;
+}
+
+.btn-large .btn-text {
+    margin-left: 8px;
+}
+
+.balance-warning {
+    background: rgba(234, 67, 53, 0.1);
+    color: var(--danger-color);
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(234, 67, 53, 0.3);
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.transaction-info {
+    margin-top: 24px;
+}
+
+.info-card {
+    background: var(--dark-surface);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.info-card i {
+    color: var(--primary-color);
+    font-size: 24px;
+    margin-top: 4px;
+}
+
+.info-content h4 {
+    margin: 0 0 12px 0;
+    color: var(--dark-text);
+    font-size: 16px;
+}
+
+.info-content ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.info-content li {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+
+.info-content li:last-child {
+    margin-bottom: 0;
+    font-weight: 500;
+    color: var(--dark-text);
+}
+
+.toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--dark-surface);
+    color: var(--dark-text);
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    z-index: 9999;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    max-width: 90%;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.toast.success {
+    background: linear-gradient(135deg, #27ae60, #219653);
+    color: white;
+    border-color: rgba(39, 174, 96, 0.3);
+}
+
+.toast.error {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border-color: rgba(231, 76, 60, 0.3);
+}
+
+.toast.info {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border-color: rgba(52, 152, 219, 0.3);
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 480px) {
+    .transaction-container {
+        padding: 16px;
+    }
+    
+    .transaction-header {
+        margin-bottom: 16px;
+    }
+    
+    .transaction-header h2 {
+        font-size: 20px;
+        order: 2;
+        width: 100%;
+        text-align: center;
+        margin: 12px 0;
+    }
+    
+    .current-balance {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        font-size: 15px;
+        padding: 12px;
+    }
+    
+    .amount-input input {
+        font-size: 28px;
+        padding: 16px 0;
+    }
+    
+    .currency-symbol {
+        font-size: 28px;
+    }
+    
+    .form-actions .btn-primary,
+    .form-actions .btn-secondary {
+        width: 100%;
+    }
+    
+    .btn-large {
+        padding: 20px 24px;
+    }
+}
+
+@media (max-width: 360px) {
+    .transaction-card {
+        padding: 20px 16px;
+    }
+    
+    .amount-input input {
+        font-size: 24px;
+    }
+    
+    .quick-amount .amount {
+        font-size: 16px;
+    }
+    
+    .quick-amount .hint {
+        font-size: 10px;
+    }
+}
+</style>
+{% endblock %}

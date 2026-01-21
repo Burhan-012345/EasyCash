@@ -1,0 +1,444 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="all-people-page">
+    <div class="page-header">
+        <a href="{{ url_for('dashboard') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+        <h1>All People You've Interacted With</h1>
+        <p class="page-subtitle">
+            {{ total_people }} person{% if total_people != 1 %}s{% endif %} • Sent & Received
+        </p>
+    </div>
+    
+    {% if people %}
+    <div class="people-filters">
+        <div class="filter-buttons">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="both">Both Ways</button>
+            <button class="filter-btn" data-filter="sent">Sent To</button>
+            <button class="filter-btn" data-filter="received">Received From</button>
+        </div>
+        <div class="sort-options">
+            <select id="sortBy" class="sort-select">
+                <option value="recent">Most Recent</option>
+                <option value="sent">Most Sent</option>
+                <option value="received">Most Received</option>
+                <option value="net-positive">Owes You</option>
+                <option value="net-negative">You Owe</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="people-list">
+        {% for person in people %}
+        <a href="{{ url_for('person_history', contact_identifier=person.phone if person.phone else person.identifier) }}" class="person-card {{ person.interaction_type }}">
+            <div class="person-avatar">
+                {{ person.username[0]|upper if person.username else 'U' }}
+                <div class="person-badge {{ person.interaction_type }}">
+                    {% if person.interaction_type == 'both' %}
+                        <i class="fas fa-exchange-alt"></i>
+                    {% elif person.interaction_type == 'sent' %}
+                        <i class="fas fa-paper-plane"></i>
+                    {% else %}
+                        <i class="fas fa-download"></i>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="person-info">
+                <div class="person-name">
+                    <strong>{{ person.username if person.username else person.phone }}</strong>
+                </div>
+                <div class="person-stats">
+                    <div class="stat-group">
+                        <span class="stat sent">
+                            <i class="fas fa-paper-plane"></i> ₹{{ "%.2f"|format(person.total_sent) }}
+                        </span>
+                        <span class="stat received">
+                            <i class="fas fa-download"></i> ₹{{ "%.2f"|format(person.total_received) }}
+                        </span>
+                    </div>
+                    <div class="stat-count">
+                        {{ person.total_interactions }} transaction{% if person.total_interactions != 1 %}s{% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="person-net">
+                <div class="net-label">
+                    {% if person.net_flow > 0 %}
+                        They owe you
+                    {% elif person.net_flow < 0 %}
+                        You owe them
+                    {% else %}
+                        Settled up
+                    {% endif %}
+                </div>
+                <div class="net-amount {% if person.net_flow > 0 %}positive{% elif person.net_flow < 0 %}negative{% endif %}">
+                    {% if person.net_flow > 0 %}+{% endif %}₹{{ "%.2f"|format(person.net_flow|abs) }}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-users"></i>
+        <h3>No Interactions Yet</h3>
+        <p>You haven't exchanged money with anyone yet.</p>
+        <div class="empty-actions">
+            <a href="{{ url_for('send_money') }}" class="btn-primary">
+                <i class="fas fa-paper-plane"></i> Send Money
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter functionality
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const personCards = document.querySelectorAll('.person-card');
+    const sortSelect = document.getElementById('sortBy');
+    
+    // Filter by interaction type
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Update active button
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            const filter = this.dataset.filter;
+            
+            // Show/hide cards based on filter
+            personCards.forEach(card => {
+                if (filter === 'all' || card.classList.contains(filter)) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+    
+    // Sort functionality
+    sortSelect.addEventListener('change', function() {
+        const cards = Array.from(personCards);
+        const sortBy = this.value;
+        
+        cards.sort((a, b) => {
+            const aNet = parseFloat(a.querySelector('.net-amount').textContent.replace('₹', '').replace('+', '').replace('-', ''));
+            const bNet = parseFloat(b.querySelector('.net-amount').textContent.replace('₹', '').replace('+', '').replace('-', ''));
+            const aTotal = parseFloat(a.querySelector('.stat.sent').textContent.replace('₹', '')) + 
+                         parseFloat(a.querySelector('.stat.received').textContent.replace('₹', ''));
+            const bTotal = parseFloat(b.querySelector('.stat.sent').textContent.replace('₹', '')) + 
+                         parseFloat(b.querySelector('.stat.received').textContent.replace('₹', ''));
+            
+            switch(sortBy) {
+                case 'sent':
+                    return parseFloat(b.querySelector('.stat.sent').textContent.replace('₹', '')) - 
+                           parseFloat(a.querySelector('.stat.sent').textContent.replace('₹', ''));
+                case 'received':
+                    return parseFloat(b.querySelector('.stat.received').textContent.replace('₹', '')) - 
+                           parseFloat(a.querySelector('.stat.received').textContent.replace('₹', ''));
+                case 'net-positive':
+                    return bNet - aNet;
+                case 'net-negative':
+                    return aNet - bNet;
+                case 'recent':
+                default:
+                    return 0; // Would need timestamp data for proper recent sorting
+            }
+        });
+        
+        // Reorder cards in DOM
+        const container = document.querySelector('.people-list');
+        cards.forEach(card => container.appendChild(card));
+    });
+});
+</script>
+
+<style>
+.all-people-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-header {
+    margin-bottom: 30px;
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 14px;
+    margin-bottom: 16px;
+    padding: 8px 0;
+}
+
+.btn-back:hover {
+    text-decoration: underline;
+}
+
+.page-header h1 {
+    margin: 0 0 8px 0;
+    color: var(--dark-text);
+    font-size: 24px;
+}
+
+.page-subtitle {
+    margin: 0;
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.people-filters {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 6px 12px;
+    background: var(--dark-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    color: var(--dark-text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.filter-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.filter-btn:hover:not(.active) {
+    background: var(--dark-surface-hover);
+}
+
+.sort-select {
+    padding: 6px 12px;
+    background: var(--dark-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--dark-text);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.people-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.person-card {
+    display: flex;
+    align-items: center;
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    padding: 16px;
+    text-decoration: none;
+    color: var(--dark-text);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    gap: 16px;
+}
+
+.person-card:hover {
+    background: var(--dark-surface-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.person-avatar {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), #0d47a1);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.person-card.sent .person-avatar {
+    background: linear-gradient(135deg, #ea4335, #c62828);
+}
+
+.person-card.received .person-avatar {
+    background: linear-gradient(135deg, #34a853, #2e7d32);
+}
+
+.person-badge {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+}
+
+.person-badge.both {
+    color: #f57c00;
+    border: 2px solid #f57c00;
+}
+
+.person-badge.sent {
+    color: #ea4335;
+    border: 2px solid #ea4335;
+}
+
+.person-badge.received {
+    color: #34a853;
+    border: 2px solid #34a853;
+}
+
+.person-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.person-name {
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.person-name strong {
+    font-weight: 600;
+}
+
+.person-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.stat-group {
+    display: flex;
+    gap: 8px;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    background: var(--dark-surface);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.stat.sent {
+    color: #ea4335;
+}
+
+.stat.received {
+    color: #34a853;
+}
+
+.stat-count {
+    font-size: 11px;
+    color: var(--dark-text-secondary);
+}
+
+.person-net {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.net-label {
+    font-size: 11px;
+    color: var(--dark-text-secondary);
+    margin-bottom: 4px;
+}
+
+.net-amount {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.net-amount.positive {
+    color: #34a853;
+}
+
+.net-amount.negative {
+    color: #ea4335;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-state i {
+    font-size: 64px;
+    color: var(--dark-text-secondary);
+    opacity: 0.5;
+    margin-bottom: 20px;
+}
+
+.empty-state h3 {
+    margin: 0 0 12px 0;
+    color: var(--dark-text);
+    font-size: 18px;
+}
+
+.empty-state p {
+    margin: 0 0 24px 0;
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.empty-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+    transition: background 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: #0d47a1;
+}
+</style>
+{% endblock %}

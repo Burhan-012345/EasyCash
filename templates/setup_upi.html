@@ -1,0 +1,929 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="upi-setup-container">
+    <!-- Header -->
+    <div class="setup-upi-header">
+        <a href="{{ url_for('dashboard') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2>Setup UPI ID</h2>
+    </div>
+    
+    <!-- UPI Setup Card -->
+    <div class="upi-setup-card">
+        <div class="upi-setup-icon">
+            <i class="fas fa-qrcode"></i>
+        </div>
+        
+        <h3>Create Your EasyCash UPI ID</h3>
+        <p class="upi-description">
+            Set up a UPI ID to receive payments instantly from any UPI app like Google Pay, PhonePe, Paytm, etc.
+        </p>
+        
+        {% if error %}
+        <div class="alert alert-error">
+            <i class="fas fa-exclamation-circle"></i>
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <form method="POST" id="upiSetupForm" action="{{ url_for('setup_upi') }}">
+            <div class="form-group">
+                <label for="upi_id">
+                    <i class="fas fa-at"></i>
+                    Choose Your UPI ID
+                </label>
+                <div class="upi-input-container">
+                    <input type="text" 
+                           name="upi_id" 
+                           id="upi_id" 
+                           placeholder="e.g., {{ user.username.lower() if user and user.username }}@easycash"
+                           value="{{ user.username.lower() if user and user.username }}@easycash"
+                           pattern="^[\w\.\d@_-]+@[\w\.-]+$"
+                           required
+                           autocomplete="off">
+                </div>
+                <div class="input-hint">
+                    Format: username@provider (e.g., {{ user.username.lower() if user and user.username }}@easycash)
+                    <br>Allowed characters: letters, numbers, dots, underscores, hyphens, and @ before the provider
+                </div>
+            </div>
+            
+            <!-- UPI ID Preview -->
+            <div class="upi-preview show" id="upi_preview">
+                <div class="preview-header">
+                    <i class="fas fa-eye"></i>
+                    <span>Your UPI ID will be:</span>
+                </div>
+                <div class="preview-value" id="preview_value">
+                    {{ user.username.lower() if user and user.username }}@easycash
+                </div>
+            </div>
+            
+            <!-- Benefits Section -->
+            <div class="benefits-section">
+                <h4><i class="fas fa-check-circle"></i> Benefits:</h4>
+                <ul class="benefits-list">
+                    <li>
+                        <i class="fas fa-bolt"></i>
+                        <span>Instant money transfers</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Secure and encrypted</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>Works with all UPI apps</span>
+                    </li>
+                    <li>
+                        <i class="fas fa-user-check"></i>
+                        <span>Easy to share with others</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Information Section -->
+            <div class="info-section">
+                <div class="info-box">
+                    <i class="fas fa-info-circle"></i>
+                    <div class="info-content">
+                        <h4>Valid UPI ID Examples</h4>
+                        <ul style="list-style: none; padding-left: 0;">
+                            <li>✓ john.doe@easycash</li>
+                            <li>✓ mary-ann@easycash</li>
+                            <li>✓ user123@easycash</li>
+                            <li>✓ ahmed@1@easycash</li>
+                            <li>✓ test.user@easycash</li>
+                            <li>✓ email_address@easycash</li>
+                        </ul>
+                        <p class="text-warning">Once set, your UPI ID cannot be changed</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Terms & Conditions -->
+            <div class="terms-section">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="accept_terms" name="accept_terms" required>
+                    <label for="accept_terms">
+                        I agree to the <a href="#" onclick="showTerms(); return false;">Terms & Conditions</a> and 
+                        understand that this UPI ID will be publicly visible to other users for sending money.
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <button type="submit" class="btn-primary btn-block" id="setup_btn">
+                <i class="fas fa-check"></i>
+                Create UPI ID
+            </button>
+            
+            <div class="skip-option">
+                <a href="{{ url_for('dashboard') }}" class="btn-text">
+                    <i class="fas fa-clock"></i>
+                    Set up later
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Terms Modal -->
+<div class="modal" id="termsModal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Terms & Conditions</h3>
+            <button class="btn-icon" onclick="hideTerms()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <h4>UPI ID Terms of Use</h4>
+            <p><strong>1. UPI ID Format:</strong></p>
+            <ul>
+                <li>Format: username@provider</li>
+                <li>Username can contain: letters, numbers, dots, underscores, hyphens, and @ symbols</li>
+                <li>Examples: john.doe@easycash, user123@easycash, ahmed@1@easycash, email_address@easycash</li>
+                <li>UPI ID cannot be changed once set</li>
+            </ul>
+            
+            <p><strong>2. Privacy & Sharing:</strong></p>
+            <ul>
+                <li>Your UPI ID will be visible to other EasyCash users</li>
+                <li>Users can find you by your UPI ID</li>
+                <li>Your username will be displayed when someone searches your UPI ID</li>
+            </ul>
+            
+            <p><strong>3. Security:</strong></p>
+            <ul>
+                <li>Never share your PIN with anyone</li>
+                <li>Report suspicious transactions immediately</li>
+                <li>EasyCash will never ask for your PIN via email or phone</li>
+            </ul>
+            
+            <p><strong>4. Acceptable Use:</strong></p>
+            <ul>
+                <li>Use UPI ID only for legitimate transactions</li>
+                <li>Do not use offensive or inappropriate UPI IDs</li>
+                <li>Comply with all applicable laws and regulations</li>
+            </ul>
+        </div>
+        <div class="modal-footer">
+            <button onclick="hideTerms()" class="btn-primary">
+                I Understand
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* CSS remains exactly the same as before */
+.upi-setup-container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px;
+    animation: fadeIn 0.5s ease;
+}
+
+.setup-upi-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.setup-upi-header h2 {
+    margin: 0;
+    color: var(--dark-text);
+    font-size: 24px;
+}
+
+.btn-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--dark-surface-light);
+    color: var(--dark-text);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.btn-back:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateX(-3px);
+}
+
+.upi-setup-card {
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    padding: 30px;
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+
+.upi-setup-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    margin: 0 auto 20px;
+}
+
+.upi-setup-card h3 {
+    margin-bottom: 10px;
+    color: var(--dark-text);
+    font-size: 22px;
+}
+
+.upi-description {
+    color: var(--dark-text-secondary);
+    margin-bottom: 30px;
+    line-height: 1.6;
+    font-size: 15px;
+}
+
+.form-group {
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: var(--dark-text);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.form-group label i {
+    color: var(--primary-color);
+}
+
+.upi-input-container {
+    background: var(--dark-surface-light);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.upi-input-container:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.upi-input-container input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--dark-text);
+    padding: 15px;
+    font-size: 16px;
+    outline: none;
+    font-family: inherit;
+    text-align: center;
+}
+
+.input-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--dark-text-secondary);
+    text-align: center;
+    line-height: 1.5;
+}
+
+.upi-preview {
+    background: var(--dark-surface-light);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+    border-left: 4px solid var(--primary-color);
+    display: block;
+    animation: slideUp 0.3s ease;
+}
+
+.upi-preview.show {
+    display: block;
+}
+
+.preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.preview-header i {
+    color: var(--primary-color);
+}
+
+.preview-value {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--primary-color);
+    word-break: break-all;
+    padding: 10px;
+    background: rgba(var(--primary-rgb), 0.1);
+    border-radius: var(--border-radius);
+    margin-top: 10px;
+}
+
+.benefits-section {
+    text-align: left;
+    margin: 25px 0;
+}
+
+.benefits-section h4 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+    font-size: 16px;
+}
+
+.benefits-list {
+    list-style: none;
+    padding: 0;
+}
+
+.benefits-list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.benefits-list li:last-child {
+    border-bottom: none;
+}
+
+.benefits-list i {
+    color: var(--success-color);
+    width: 20px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.benefits-list span {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.info-section {
+    margin: 25px 0;
+}
+
+.info-box {
+    background: rgba(var(--primary-rgb), 0.05);
+    border: 1px solid rgba(var(--primary-rgb), 0.2);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    display: flex;
+    gap: 15px;
+    text-align: left;
+}
+
+.info-box i {
+    color: var(--primary-color);
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.info-content h4 {
+    margin: 0 0 10px 0;
+    color: var(--dark-text);
+    font-size: 16px;
+}
+
+.info-content ul {
+    margin: 10px 0;
+    padding-left: 0;
+}
+
+.info-content li {
+    margin: 5px 0;
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.text-warning {
+    color: #f39c12 !important;
+    font-weight: 500;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.terms-section {
+    margin: 25px 0;
+    padding: 20px;
+    background: rgba(var(--primary-rgb), 0.05);
+    border-radius: var(--border-radius);
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-top: 4px;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
+
+.checkbox-group label {
+    font-size: 14px;
+    color: var(--dark-text-secondary);
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.checkbox-group a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.checkbox-group a:hover {
+    text-decoration: underline;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border: none;
+    padding: 15px 20px;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.btn-primary:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn-primary i {
+    font-size: 14px;
+}
+
+.skip-option {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-text {
+    color: var(--dark-text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+}
+
+.btn-text:hover {
+    color: var(--primary-color);
+}
+
+.alert {
+    padding: 12px 16px;
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideDown 0.3s ease;
+}
+
+.alert-error {
+    background: rgba(231, 76, 60, 0.1);
+    border-left: 4px solid var(--danger-color);
+    color: var(--danger-color);
+}
+
+.alert i {
+    font-size: 18px;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background: var(--dark-surface);
+    border-radius: var(--border-radius);
+    max-width: 500px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.3s ease;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--dark-text);
+    font-size: 20px;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    color: var(--dark-text-secondary);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.btn-icon:hover {
+    background: var(--dark-surface-light);
+    color: var(--dark-text);
+}
+
+.modal-body {
+    padding: 20px;
+    color: var(--dark-text-secondary);
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+.modal-body h4 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.modal-body ul {
+    padding-left: 20px;
+    margin-bottom: 15px;
+}
+
+.modal-body li {
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.modal-footer {
+    padding: 20px;
+    border-top: 1px solid var(--border-color);
+    text-align: right;
+}
+
+/* Toast Notification */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: var(--border-radius);
+    color: white;
+    font-weight: 500;
+    z-index: 1001;
+    transform: translateX(150%);
+    transition: transform 0.3s ease;
+    box-shadow: var(--shadow-lg);
+    max-width: 350px;
+}
+
+.toast-notification.show {
+    transform: translateX(0);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from { 
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .upi-setup-container {
+        padding: 15px;
+    }
+    
+    .upi-setup-card {
+        padding: 20px;
+    }
+    
+    .setup-upi-header h2 {
+        font-size: 20px;
+    }
+    
+    .info-box {
+        flex-direction: column;
+        text-align: center;
+        padding: 15px;
+    }
+    
+    .info-box i {
+        font-size: 20px;
+    }
+    
+    .modal-content {
+        margin: 10px;
+    }
+    
+    .modal-header h3 {
+        font-size: 18px;
+    }
+    
+    .modal-body {
+        padding: 15px;
+    }
+    
+    .preview-value {
+        font-size: 18px;
+        padding: 8px;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const upiInput = document.getElementById('upi_id');
+    const previewValue = document.getElementById('preview_value');
+    const setupBtn = document.getElementById('setup_btn');
+    const termsCheckbox = document.getElementById('accept_terms');
+    const upiPreview = document.getElementById('upi_preview');
+    const form = document.getElementById('upiSetupForm');
+    
+    // Update preview when typing
+    upiInput.addEventListener('input', function() {
+        const value = this.value.trim();
+        
+        if (value) {
+            previewValue.textContent = value;
+            upiPreview.classList.add('show');
+        } else {
+            upiPreview.classList.remove('show');
+        }
+        
+        // Validate format in real-time
+        validateUPI(value);
+    });
+    
+    // Validate UPI ID format - FIXED REGEX
+    function validateUPI(upiId) {
+        // FIXED REGEX: r'^[\w\.\d@_-]+@[\w\.-]+$'
+        const upiRegex = /^[\w\.\d@_-]+@[\w\.-]+$/;
+        const isValid = upiRegex.test(upiId);
+        
+        if (upiId) {
+            if (!isValid) {
+                upiInput.style.borderColor = 'var(--danger-color)';
+                upiInput.parentElement.style.borderColor = 'var(--danger-color)';
+                return false;
+            } else {
+                upiInput.style.borderColor = '';
+                upiInput.parentElement.style.borderColor = '';
+                return true;
+            }
+        }
+        return true;
+    }
+    
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        // Check terms and conditions
+        if (!termsCheckbox.checked) {
+            e.preventDefault();
+            showToast('Please accept the terms and conditions', 'error');
+            termsCheckbox.focus();
+            return;
+        }
+        
+        // Validate UPI ID format - FIXED REGEX
+        const upiId = upiInput.value.trim();
+        // FIXED REGEX: r'^[\w\.\d@_-]+@[\w\.-]+$'
+        const upiRegex = /^[\w\.\d@_-]+@[\w\.-]+$/;
+        
+        if (!upiRegex.test(upiId)) {
+            e.preventDefault();
+            showToast('Invalid UPI ID format. Use format: username@provider', 'error');
+            upiInput.focus();
+            upiInput.select();
+            return;
+        }
+        
+        // Show loading state
+        setupBtn.disabled = true;
+        setupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating UPI ID...';
+        
+        // Allow form to submit normally
+    });
+    
+    // Focus on input when page loads
+    setTimeout(() => {
+        upiInput.focus();
+        upiInput.select();
+    }, 500);
+    
+    // Show terms modal
+    window.showTerms = function() {
+        document.getElementById('termsModal').style.display = 'flex';
+        return false; // Prevent default link behavior
+    };
+    
+    // Hide terms modal
+    window.hideTerms = function() {
+        document.getElementById('termsModal').style.display = 'none';
+    };
+    
+    // Close modal when clicking outside
+    document.getElementById('termsModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideTerms();
+        }
+    });
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            hideTerms();
+        }
+    });
+    
+    // Toast notification function
+    function showToast(message, type = 'info') {
+        // Remove existing toast
+        let existingToast = document.querySelector('.toast-notification');
+        if (existingToast) {
+            existingToast.remove();
+        }
+        
+        // Create new toast
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        
+        // Set background color based on type
+        const colors = {
+            success: 'linear-gradient(135deg, #27ae60, #219653)',
+            error: 'linear-gradient(135deg, #e74c3c, #c0392b)',
+            warning: 'linear-gradient(135deg, #f39c12, #d35400)',
+            info: 'linear-gradient(135deg, #3498db, #2980b9)'
+        };
+        
+        toast.style.background = colors[type] || colors.info;
+        toast.textContent = message;
+        
+        // Add icon based on type
+        const icon = document.createElement('i');
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+        
+        icon.className = `fas ${icons[type] || icons.info}`;
+        toast.insertBefore(icon, toast.firstChild);
+        
+        document.body.appendChild(toast);
+        
+        // Show toast
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 300);
+        }, 3000);
+    }
+    
+    // Add some helpful validation messages
+    upiInput.addEventListener('blur', function() {
+        const value = this.value.trim();
+        if (value && !validateUPI(value)) {
+            showToast('UPI ID must be in format: username@provider', 'error');
+        }
+    });
+    
+    // Auto-format on blur (add @easycash if not provided)
+    upiInput.addEventListener('blur', function() {
+        let value = this.value.trim();
+        if (value && !value.includes('@')) {
+            value = value + '@easycash';
+            this.value = value;
+            previewValue.textContent = value;
+            validateUPI(value);
+        }
+    });
+    
+    // Test UPI validation with examples - UPDATED TEST CASES
+    window.testUPIValidation = function() {
+        const testCases = [
+            { upi: 'ahmed@1@easycash', expected: true },
+            { upi: 'john.doe@easycash', expected: true },
+            { upi: 'user123@easycash', expected: true },
+            { upi: 'test@easycash', expected: true },
+            { upi: 'email_address@easycash', expected: true },
+            { upi: 'user-name@easycash', expected: true },
+            { upi: 'test.user@easycash', expected: true },
+            { upi: 'invalid@', expected: false },
+            { upi: '@easycash', expected: false },
+            { upi: 'test@easy@cash', expected: false }
+        ];
+        
+        // FIXED REGEX
+        const upiRegex = /^[\w\.\d@_-]+@[\w\.-]+$/;
+        console.log('Testing UPI validation with FIXED regex:');
+        testCases.forEach(test => {
+            const result = upiRegex.test(test.upi);
+            console.log(`${test.upi}: ${result === test.expected ? '✓' : '✗'} (expected ${test.expected}, got ${result})`);
+        });
+    };
+});
+</script>
+{% endblock %}

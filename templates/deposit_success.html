@@ -1,0 +1,1346 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="transaction-success-container">
+    <!-- Success Header -->
+    <div class="success-header">
+        <a href="{{ url_for('dashboard') }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+        </a>
+        <div class="header-title">
+            <h1>Deposit Successful</h1>
+            <p class="subtitle">Your funds have been added to your wallet</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-icon" onclick="printReceipt()" title="Print Receipt">
+                <i class="fas fa-print"></i>
+            </button>
+            <button class="btn-icon" onclick="shareReceipt()" title="Share">
+                <i class="fas fa-share-alt"></i>
+            </button>
+            <a href="{{ url_for('deposit_receipt', transaction_id=transaction.transaction_id) if transaction else '#' }}" 
+               class="btn-icon" 
+               title="View Receipt"
+               {% if not transaction %}onclick="showToast('Transaction not found', 'error'); return false;"{% endif %}>
+                <i class="fas fa-receipt"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Success Status Card -->
+    <div class="status-card success">
+        <div class="status-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="status-content">
+            <h3>Transaction Completed</h3>
+            <p class="status-message">₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }} has been deposited to your wallet</p>
+            <div class="status-timestamp">
+                <i class="far fa-clock"></i>
+                {{ transaction_date.strftime('%d %b %Y at %I:%M %p') }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Summary -->
+    <div class="summary-card">
+        <div class="summary-header">
+            <h3><i class="fas fa-receipt"></i> Transaction Summary</h3>
+            <span class="badge badge-success">COMPLETED</span>
+        </div>
+        
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="item-label">Transaction ID</div>
+                <div class="item-value">
+                    <code>{{ transaction.transaction_id if transaction else 'N/A' }}</code>
+                    <button class="btn-copy" onclick="copyToClipboard('{{ transaction.transaction_id if transaction else "" }}')">
+                        <i class="far fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="item-label">Reference Number</div>
+                <div class="item-value">
+                    <code>{{ transaction.transaction_id[:12]|upper if transaction else 'N/A' }}</code>
+                </div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="item-label">Amount Deposited</div>
+                <div class="item-value amount-positive">
+                    +₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}
+                </div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="item-label">Processing Fee</div>
+                <div class="item-value">₹0.00</div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="item-label">Payment Method</div>
+                <div class="item-value">Wallet Top-up</div>
+            </div>
+            
+            <div class="summary-item">
+                <div class="item-label">Status</div>
+                <div class="item-value">
+                    <span class="status-badge success">Completed</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Balance Update Card -->
+    <div class="balance-update-card">
+        <div class="balance-header">
+            <h3><i class="fas fa-chart-line"></i> Balance Update</h3>
+        </div>
+        
+        <div class="balance-timeline">
+            <div class="timeline-step">
+                <div class="step-icon">
+                    <i class="fas fa-wallet"></i>
+                </div>
+                <div class="step-content">
+                    <div class="step-label">Previous Balance</div>
+                    <div class="step-value">₹{{ "%.2f"|format(user.balance - transaction.amount) if transaction and user else '0.00' }}</div>
+                </div>
+            </div>
+            
+            <div class="timeline-step">
+                <div class="step-icon positive">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <div class="step-content">
+                    <div class="step-label">Amount Added</div>
+                    <div class="step-value amount-positive">+₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}</div>
+                </div>
+            </div>
+            
+            <div class="timeline-step current">
+                <div class="step-icon current">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="step-content">
+                    <div class="step-label">Current Balance</div>
+                    <div class="step-value current">₹{{ "%.2f"|format(user.balance) if user else '0.00' }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="balance-growth">
+            <div class="growth-item">
+                <span class="growth-label">Balance Increase</span>
+                <span class="growth-value positive">+{{ "%.2f"|format((transaction.amount/(user.balance - transaction.amount))*100 if transaction and user and (user.balance - transaction.amount) > 0 else 100) }}%</span>
+            </div>
+            <div class="growth-item">
+                <span class="growth-label">Available Credit</span>
+                <span class="growth-value">₹{{ "%.2f"|format(user.balance * 0.5) if user else '0.00' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions-grid">
+        <a href="{{ url_for('dashboard') }}" class="quick-action">
+            <div class="action-icon">
+                <i class="fas fa-home"></i>
+            </div>
+            <div class="action-text">Dashboard</div>
+        </a>
+        
+        <a href="{{ url_for('deposit') }}" class="quick-action">
+            <div class="action-icon">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <div class="action-text">Deposit Again</div>
+        </a>
+        
+        <a href="{{ url_for('transactions') }}" class="quick-action">
+            <div class="action-icon">
+                <i class="fas fa-history"></i>
+            </div>
+            <div class="action-text">History</div>
+        </a>
+        
+        <a href="{{ url_for('deposit_receipt', transaction_id=transaction.transaction_id) if transaction else '#' }}" 
+           class="quick-action"
+           {% if not transaction %}onclick="showToast('Transaction not found', 'error'); return false;"{% endif %}>
+            <div class="action-icon">
+                <i class="fas fa-receipt"></i>
+            </div>
+            <div class="action-text">View Receipt</div>
+        </a>
+        
+        <button onclick="downloadReceipt()" class="quick-action">
+            <div class="action-icon">
+                <i class="fas fa-download"></i>
+            </div>
+            <div class="action-text">Download</div>
+        </button>
+    </div>
+
+    <!-- Security & Info -->
+    <div class="info-card">
+        <div class="info-header">
+            <i class="fas fa-shield-alt"></i>
+            <h4>Transaction Security</h4>
+        </div>
+        <div class="info-content">
+            <ul class="security-list">
+                <li>
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>Transaction is secured with 256-bit encryption</span>
+                </li>
+                <li>
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>Funds are available immediately for use</span>
+                </li>
+                <li>
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>Receipt has been sent to your account records</span>
+                </li>
+                <li>
+                    <i class="fas fa-check-circle text-success"></i>
+                    <span>You can dispute this transaction within 24 hours</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Next Steps -->
+    <div class="next-steps">
+        <h4>What would you like to do next?</h4>
+        <div class="steps-grid">
+            <a href="{{ url_for('withdraw') }}" class="step-card">
+                <div class="step-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <div class="step-content">
+                    <h5>Withdraw Funds</h5>
+                    <p>Transfer money to your bank account</p>
+                </div>
+                <i class="fas fa-chevron-right step-arrow"></i>
+            </a>
+            
+            <a href="{{ url_for('send_money') }}" class="step-card">
+                <div class="step-icon">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+                <div class="step-content">
+                    <h5>Send Money</h5>
+                    <p>Transfer to friends and family</p>
+                </div>
+                <i class="fas fa-chevron-right step-arrow"></i>
+            </a>
+            
+            <a href="{{ url_for('profile') }}" class="step-card">
+                <div class="step-icon">
+                    <i class="fas fa-user-cog"></i>
+                </div>
+                <div class="step-content">
+                    <h5>Account Settings</h5>
+                    <p>Update your profile and preferences</p>
+                </div>
+                <i class="fas fa-chevron-right step-arrow"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Support Card -->
+    <div class="support-card">
+        <div class="support-header">
+            <i class="fas fa-headset"></i>
+            <h4>Need Help?</h4>
+        </div>
+        <div class="support-content">
+            <p>If you have any questions about this transaction, our support team is here to help.</p>
+            <div class="support-actions">
+                <a href="mailto:support@easycash.com" class="btn-support">
+                    <i class="fas fa-envelope"></i>
+                    Email Support
+                </a>
+                <a href="tel:+911800123456" class="btn-support">
+                    <i class="fas fa-phone"></i>
+                    Call Support
+                </a>
+                <a href="{{ url_for('contacts') }}" class="btn-support">
+                    <i class="fas fa-question-circle"></i>
+                    Help Center
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show success notification
+    showToast('🎉 Deposit successful! ₹{{ "%.2f"|format(transaction.amount) if transaction else "0.00" }} added to your wallet', 'success');
+    
+    // Start session timer
+    startSessionTimer();
+    
+    // Auto scroll to top
+    window.scrollTo(0, 0);
+});
+
+function copyToClipboard(text) {
+    if (!text) {
+        showToast('Nothing to copy', 'error');
+        return;
+    }
+    
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Transaction ID copied to clipboard', 'success');
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+        showToast('Failed to copy', 'error');
+    });
+}
+
+function downloadReceipt() {
+    showToast('Generating receipt...', 'info');
+    
+    // Show loading state
+    const downloadBtn = document.querySelector('[onclick="downloadReceipt()"]');
+    const originalText = downloadBtn.innerHTML;
+    downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    downloadBtn.disabled = true;
+    
+    // Use the deposit receipt endpoint
+    const transactionId = '{{ transaction.transaction_id if transaction else "" }}';
+    if (transactionId) {
+        // Open receipt page in new tab for better printing/downloading
+        const receiptUrl = `/deposit-receipt/${transactionId}`;
+        const win = window.open(receiptUrl, '_blank');
+        
+        // After a delay, try to trigger print dialog
+        setTimeout(() => {
+            if (win) {
+                win.focus();
+                // The receipt page has its own print/download functionality
+            }
+        }, 1000);
+    } else {
+        // Fallback to generic receipt
+        window.location.href = '/download-receipt?filter=deposit&date_range=today';
+    }
+    
+    // Reset button after 3 seconds
+    setTimeout(() => {
+        downloadBtn.innerHTML = originalText;
+        downloadBtn.disabled = false;
+    }, 3000);
+}
+
+function shareReceipt() {
+    const transactionId = '{{ transaction.transaction_id if transaction else "" }}';
+    const amount = '{{ "%.2f"|format(transaction.amount) if transaction else "0.00" }}';
+    const date = '{{ transaction_date.strftime("%d %b %Y at %I:%M %p") }}';
+    
+    const shareData = {
+        title: 'EasyCash Deposit Receipt',
+        text: `I just deposited ₹${amount} to my EasyCash wallet on ${date}. Transaction ID: ${transactionId}`,
+        url: window.location.href,
+    };
+    
+    if (navigator.share && navigator.canShare(shareData)) {
+        navigator.share(shareData)
+            .then(() => showToast('Receipt shared successfully', 'success'))
+            .catch(error => {
+                if (error.name !== 'AbortError') {
+                    console.error('Share failed:', error);
+                    copyToClipboard(shareData.text);
+                    showToast('Receipt details copied to clipboard', 'info');
+                }
+            });
+    } else {
+        // Fallback for browsers that don't support Web Share API
+        copyToClipboard(shareData.text);
+        showToast('Receipt details copied to clipboard', 'info');
+    }
+}
+
+// Print receipt with custom styling
+function printReceipt() {
+    const transactionId = '{{ transaction.transaction_id if transaction else "" }}';
+    if (transactionId) {
+        // Open receipt page in new tab and print
+        const receiptUrl = `/deposit-receipt/${transactionId}`;
+        const win = window.open(receiptUrl, '_blank');
+        
+        setTimeout(() => {
+            if (win) {
+                // Wait for page to load
+                win.onload = function() {
+                    setTimeout(() => {
+                        win.print();
+                        win.onafterprint = () => {
+                            setTimeout(() => {
+                                win.close();
+                            }, 500);
+                        };
+                    }, 500);
+                };
+            }
+        }, 100);
+    } else {
+        // Fallback to current page printing
+        const printContent = document.querySelector('.transaction-success-container').innerHTML;
+        const originalContent = document.body.innerHTML;
+        
+        document.body.innerHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>EasyCash Receipt - {{ transaction.transaction_id if transaction else "" }}</title>
+                <style>
+                    @media print {
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            padding: 20px; 
+                            font-size: 14px;
+                            color: #333;
+                        }
+                        .receipt-header { 
+                            text-align: center; 
+                            border-bottom: 2px solid #000; 
+                            padding-bottom: 20px; 
+                            margin-bottom: 30px; 
+                        }
+                        .receipt-header h1 {
+                            color: #2c3e50;
+                            margin: 0 0 10px 0;
+                        }
+                        .receipt-header p {
+                            color: #7f8c8d;
+                            margin: 0;
+                        }
+                        .receipt-details { 
+                            margin: 30px 0; 
+                        }
+                        .detail-row { 
+                            display: flex; 
+                            justify-content: space-between; 
+                            margin: 10px 0; 
+                            padding: 8px 0; 
+                            border-bottom: 1px dashed #ccc; 
+                        }
+                        .detail-row .label {
+                            font-weight: 600;
+                            color: #555;
+                        }
+                        .detail-row .value {
+                            color: #333;
+                        }
+                        .amount-positive {
+                            color: #27ae60;
+                            font-weight: bold;
+                        }
+                        .total-row { 
+                            font-weight: bold; 
+                            font-size: 1.2em; 
+                            border-top: 2px solid #000; 
+                            margin-top: 20px; 
+                            padding-top: 20px; 
+                        }
+                        .footer { 
+                            text-align: center; 
+                            margin-top: 40px; 
+                            font-size: 0.8em; 
+                            color: #666; 
+                            border-top: 1px solid #ccc;
+                            padding-top: 20px;
+                        }
+                        .no-print { 
+                            display: none; 
+                        }
+                        .security-info {
+                            background: #f8f9fa;
+                            padding: 15px;
+                            border-radius: 5px;
+                            margin: 20px 0;
+                        }
+                    }
+                    @page {
+                        margin: 20mm;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="receipt-header">
+                    <h1>EasyCash Deposit Receipt</h1>
+                    <p>Digital Wallet Transaction</p>
+                </div>
+                <div class="receipt-details">
+                    <div class="detail-row">
+                        <span class="label">Transaction ID:</span>
+                        <span class="value">{{ transaction.transaction_id if transaction else "" }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Date & Time:</span>
+                        <span class="value">{{ transaction_date.strftime("%d %b %Y at %I:%M %p") }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Transaction Type:</span>
+                        <span class="value">Deposit</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Amount:</span>
+                        <span class="value amount-positive">₹{{ "%.2f"|format(transaction.amount) if transaction else "0.00" }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Status:</span>
+                        <span class="value">Completed</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Account Holder:</span>
+                        <span class="value">{{ user.username if user else "" }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Phone Number:</span>
+                        <span class="value">{{ user.phone if user else "" }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Previous Balance:</span>
+                        <span class="value">₹{{ "%.2f"|format(user.balance - transaction.amount) if transaction and user else '0.00' }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Deposit Amount:</span>
+                        <span class="value amount-positive">+₹{{ "%.2f"|format(transaction.amount) if transaction else '0.00' }}</span>
+                    </div>
+                    <div class="total-row detail-row">
+                        <span class="label">Current Balance:</span>
+                        <span class="value">₹{{ "%.2f"|format(user.balance) if user else '0.00' }}</span>
+                    </div>
+                </div>
+                
+                <div class="security-info">
+                    <p><strong>Security Information:</strong></p>
+                    <p>✓ Transaction secured with 256-bit encryption</p>
+                    <p>✓ Funds credited instantly</p>
+                    <p>✓ Receipt stored in account records</p>
+                    <p>✓ Dispute period: 24 hours from transaction</p>
+                </div>
+                
+                <div class="footer">
+                    <p>This is an electronic receipt. No signature required.</p>
+                    <p>Thank you for using EasyCash!</p>
+                    <p>For any queries, contact support@easycash.com or call 1800-123-456</p>
+                    <p>Generated on {{ now().strftime("%d %b %Y at %I:%M %p") }}</p>
+                </div>
+            </body>
+            </html>
+        `;
+        
+        window.print();
+        document.body.innerHTML = originalContent;
+        window.location.reload();
+    }
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    // Remove existing toast
+    const existingToast = document.querySelector('.toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+    
+    // Create toast
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    document.body.appendChild(toast);
+    
+    // Show toast with animation
+    setTimeout(() => toast.classList.add('show'), 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Session timer function
+function startSessionTimer() {
+    let timeLeft = 900; // 15 minutes in seconds
+    const timerElement = document.createElement('div');
+    timerElement.className = 'session-timer';
+    timerElement.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 20px;
+        font-size: 12px;
+        z-index: 1000;
+        display: none;
+    `;
+    document.body.appendChild(timerElement);
+
+    const updateTimer = () => {
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            timerElement.style.display = 'none';
+            showToast('Session expired. Please login again.', 'warning');
+            setTimeout(() => {
+                window.location.href = '/logout';
+            }, 2000);
+            return;
+        }
+
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timerElement.textContent = `Session: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Show timer when less than 5 minutes remaining
+        if (timeLeft <= 300) {
+            timerElement.style.display = 'block';
+        }
+        
+        timeLeft--;
+    };
+
+    const timerInterval = setInterval(updateTimer, 1000);
+    updateTimer();
+
+    // Reset timer on user activity
+    const resetTimer = () => {
+        timeLeft = 900;
+    };
+
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keydown', resetTimer);
+    window.addEventListener('click', resetTimer);
+    window.addEventListener('scroll', resetTimer);
+}
+
+// Add toast styles if not present
+if (!document.querySelector('#toast-styles')) {
+    const toastStyles = document.createElement('style');
+    toastStyles.id = 'toast-styles';
+    toastStyles.textContent = `
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--dark-surface);
+            color: var(--dark-text);
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 9999;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            max-width: 90%;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .toast.success {
+            background: linear-gradient(135deg, #27ae60, #219653);
+            color: white;
+            border-color: rgba(39, 174, 96, 0.3);
+        }
+        .toast.error {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border-color: rgba(231, 76, 60, 0.3);
+        }
+        .toast.info {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border-color: rgba(52, 152, 219, 0.3);
+        }
+        .toast.warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            border-color: rgba(243, 156, 18, 0.3);
+        }
+    `;
+    document.head.appendChild(toastStyles);
+}
+</script>
+
+<style>
+.transaction-success-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.success-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.success-header .header-title {
+    flex: 1;
+    text-align: center;
+}
+
+.success-header .header-title h1 {
+    margin: 0;
+    color: var(--primary-color);
+    font-size: 28px;
+}
+
+.success-header .header-title .subtitle {
+    color: var(--dark-text-secondary);
+    margin: 5px 0 0 0;
+    font-size: 16px;
+}
+
+.success-header .header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--dark-surface-light);
+    color: var(--dark-text);
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+}
+
+.btn-back:hover {
+    background: var(--dark-surface);
+    transform: translateX(-2px);
+}
+
+.btn-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--dark-surface-light);
+    border: 1px solid var(--border-color);
+    color: var(--dark-text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.btn-icon:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Status Card */
+.status-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: linear-gradient(135deg, #27ae60, #219653);
+    color: white;
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
+}
+
+.status-card.success {
+    background: linear-gradient(135deg, #27ae60, #219653);
+}
+
+.status-icon {
+    font-size: 48px;
+    opacity: 0.9;
+}
+
+.status-content h3 {
+    margin: 0 0 10px 0;
+    font-size: 24px;
+}
+
+.status-message {
+    font-size: 18px;
+    margin: 0 0 10px 0;
+    opacity: 0.95;
+}
+
+.status-timestamp {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* Summary Card */
+.summary-card {
+    background: var(--dark-surface);
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color);
+}
+
+.summary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.summary-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 20px;
+}
+
+.badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.badge-success {
+    background: rgba(39, 174, 96, 0.1);
+    color: #27ae60;
+    border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 15px;
+    background: var(--dark-surface-light);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.item-label {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.item-value {
+    color: var(--dark-text);
+    font-weight: 600;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.item-value code {
+    background: rgba(0,0,0,0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.amount-positive {
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.btn-copy {
+    background: none;
+    border: none;
+    color: var(--dark-text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.btn-copy:hover {
+    color: var(--primary-color);
+    background: rgba(0,0,0,0.05);
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-badge.success {
+    background: rgba(39, 174, 96, 0.1);
+    color: #27ae60;
+    border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+/* Balance Update Card */
+.balance-update-card {
+    background: var(--dark-surface);
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color);
+}
+
+.balance-header {
+    margin-bottom: 25px;
+}
+
+.balance-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 20px;
+}
+
+.balance-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.timeline-step {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: var(--dark-surface-light);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    position: relative;
+}
+
+.timeline-step.current {
+    background: rgba(39, 174, 96, 0.05);
+    border-color: rgba(39, 174, 96, 0.3);
+}
+
+.step-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--dark-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    border: 2px solid var(--border-color);
+}
+
+.step-icon.positive {
+    color: #27ae60;
+    border-color: rgba(39, 174, 96, 0.3);
+}
+
+.step-icon.current {
+    color: #27ae60;
+    background: rgba(39, 174, 96, 0.1);
+    border-color: #27ae60;
+}
+
+.step-content {
+    flex: 1;
+}
+
+.step-label {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.step-value {
+    color: var(--dark-text);
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.step-value.current {
+    color: #27ae60;
+    font-size: 20px;
+}
+
+.balance-growth {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.growth-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: var(--dark-surface-light);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.growth-label {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.growth-value {
+    color: var(--dark-text);
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.growth-value.positive {
+    color: #27ae60;
+}
+
+/* Quick Actions */
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.quick-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 15px;
+    background: var(--dark-surface);
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--dark-text);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.quick-action:hover {
+    background: var(--dark-surface-light);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.action-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--dark-surface-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: var(--primary-color);
+}
+
+.action-text {
+    font-weight: 500;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* Info Card */
+.info-card {
+    background: var(--dark-surface);
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color);
+}
+
+.info-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.info-header i {
+    font-size: 24px;
+    color: #27ae60;
+}
+
+.info-header h4 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.security-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.security-list li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: var(--dark-surface-light);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.security-list i {
+    font-size: 16px;
+}
+
+.security-list span {
+    color: var(--dark-text);
+    font-size: 14px;
+}
+
+.text-success {
+    color: #27ae60 !important;
+}
+
+/* Next Steps */
+.next-steps {
+    background: var(--dark-surface);
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color);
+}
+
+.next-steps h4 {
+    margin: 0 0 25px 0;
+    font-size: 20px;
+    text-align: center;
+}
+
+.steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.step-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    background: var(--dark-surface-light);
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--dark-text);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.step-card:hover {
+    background: var(--dark-surface);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.step-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary-color), #1a73e8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: white;
+}
+
+.step-content {
+    flex: 1;
+}
+
+.step-content h5 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+}
+
+.step-content p {
+    margin: 0;
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+.step-arrow {
+    color: var(--dark-text-secondary);
+    font-size: 14px;
+}
+
+/* Support Card */
+.support-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 30px;
+}
+
+.support-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.support-header i {
+    font-size: 28px;
+}
+
+.support-header h4 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.support-content p {
+    margin: 0 0 20px 0;
+    font-size: 16px;
+    opacity: 0.95;
+}
+
+.support-actions {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.btn-support {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.btn-support:hover {
+    background: rgba(255,255,255,0.2);
+    transform: translateY(-2px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .transaction-success-container {
+        padding: 15px;
+    }
+    
+    .success-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .header-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .status-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .balance-timeline {
+        gap: 15px;
+    }
+    
+    .quick-actions-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .steps-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .support-actions {
+        flex-direction: column;
+    }
+    
+    .btn-support {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .quick-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .status-card {
+        padding: 15px;
+    }
+    
+    .summary-card,
+    .balance-update-card,
+    .info-card,
+    .next-steps {
+        padding: 20px;
+    }
+    
+    .step-card {
+        padding: 15px;
+    }
+    
+    .support-card {
+        padding: 20px;
+    }
+}
+</style>
+{% endblock %}
